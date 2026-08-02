@@ -1,0 +1,269 @@
+Overlay patch 0047: unconditional ImGui Begin/BeginChild terminators.
+
+NUMBERING: 0037+ are Lighthouse-only.
+
+FOUND BY TESTING, not by reading. Opening the **Rando** tab pops Dear ImGui's
+assertion dialog over the game and leaves the menu unusable:
+
+    In window 'Main Menu/.../General Settings_...': Missing EndTabBar()
+    In window 'Main Menu/.../General Settings_...': Missing PopID()
+    In window 'Main Menu/Menu Block_...': Must call EndChild() and not End()!
+    In window 'Main - Deck': Missing End()
+
+THE RULE UPSTREAM IS BREAKING. `ImGui::Begin()` and `ImGui::BeginChild()` must
+be paired with `End()` / `EndChild()` **unconditionally** — the return value
+says whether the contents are VISIBLE, not whether the window was pushed. The
+old "skip End() when Begin() returns false" idiom was removed for child windows
+in ImGui 1.90, and the version LUS ships treats it as an error. Upstream writes
+the terminator inside the `if` in 17 places:
+
+    if (ImGui::BeginChild("SeedData", ...)) {
+        ...
+        ImGui::EndChild();     // <-- skipped whenever the child is culled
+    }
+
+When the window or child is culled — collapsed, clipped, scrolled out of view,
+or simply off-screen on a phone-sized viewport — the terminator never runs, the
+window stack unwinds wrong, and ImGui reports the damage against whichever
+window happens to be open when it notices. That is why the errors name 'General
+Settings' and 'Main - Deck' rather than the code at fault: the assertion
+surfaces far from its cause, which is what made a first pass at this patch fix
+only three of the sites and change nothing the user could see.
+
+WHY IT BITES iOS HARDER THAN DESKTOP. Every one of these children is sized from
+`GetContentRegionAvail()`, so on a short viewport they clip, `BeginChild()`
+returns false, and the terminator is skipped. On a desktop-sized window most of
+them stay visible and the bug hides.
+
+SCOPE — all 17 sites, not just Rando's:
+  * `Rando/CheckTracker/CheckTracker.cpp`   x4  (one is a `Begin()`/`End()`)
+  * `Rando/Logic/Metrics.cpp`               x4  (the Seed Metrics tab bar)
+  * `UI/DeveloperTools/SaveEditor.cpp`      x5
+  * `UI/DeveloperTools/GameplayTools.cpp`   x2
+  * `UI/LighthouseModMenuWindow.cpp`        x2  (the texture-pack UI the README
+                                                 tells users to open)
+The Mod Menu pair matters as much as Rando's: a corrupted stack there would hit
+anyone following the texture-pack instructions.
+
+UPSTREAM BUG, not a porting artifact: no other patch in this overlay touches any
+of these files, and the imbalance is plain in upstream's source. Worth reporting
+upstream — the fix there is identical.
+
+HOW THE FIX IS DERIVED, and why that is safe. The sites are found structurally
+(brace matching) rather than by 17 hand-written string matches, then each one is
+checked against four invariants before it is touched:
+
+  1. exactly one terminator in the block,
+  2. it is the LAST statement, immediately before the closing brace,
+  3. the block closes on a bare `}` at the `if`'s own indent,
+  4. no function-level `return` inside the block.
+
+(1)-(3) make "move it past the brace" a pure relocation; (4) is what makes it
+semantically identical — a `return` would skip the moved call. Three blocks do
+contain jumps, all `continue` inside nested loops, which cannot escape the
+block. The site count is asserted at 17, so an upstream bump that adds a site,
+fixes one, or reshapes one fails the generator loudly instead of silently
+leaving a broken menu behind (program ground rule 3).
+
+Behaviour when the window IS visible is bit-identical. When it is culled, the
+stack now unwinds correctly instead of corrupting the whole menu.
+
+--- a/src/port/Rando/CheckTracker/CheckTracker.cpp
++++ b/src/port/Rando/CheckTracker/CheckTracker.cpp
+@@ -151,8 +151,9 @@
+                                  ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+                 ImGui::SetWindowFontScale(collectedChecksScale);
+                 ImGui::Text("Checks: %s", totalCheckCount.c_str());
+-                ImGui::End();
+             }
++            // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++            ImGui::End();
+             ImGui::PopStyleColor(3);
+         } else {
+             ImGui::Text("Checks: %s", totalCheckCount.c_str());
+@@ -291,8 +292,9 @@
+             if (ImGui::BeginChild("CheckTrackerChild")) {
+                 DrawCheckTrackerList();
+                 expandState = expandToggle;
+-                ImGui::EndChild();
+             }
++            // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++            ImGui::EndChild();
+         }
+     }
+ 
+@@ -328,8 +330,9 @@
+         if (!checkTrackerPopoutState) {
+             if (ImGui::BeginChild("EmbeddedCheckTrackerChild")) {
+                 DrawCheckTrackerList();
+-                ImGui::EndChild();
+             }
++            // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++            ImGui::EndChild();
+         } else {
+             ImGui::TextColored(UIWidgets::ColorValues.at(WIDGET_COLOR), "Tracker popped out");
+         }
+@@ -432,8 +435,9 @@
+                 ImGui::PopID();
+                 checkColorIndex++;
+             }
+-            ImGui::EndChild();
+         }
++        // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++        ImGui::EndChild();
+         ImGui::EndTable();
+     }
+ }
+--- a/src/port/Rando/Logic/Metrics.cpp
++++ b/src/port/Rando/Logic/Metrics.cpp
+@@ -23,8 +23,9 @@
+         for (auto& event : eventAccessList) {
+             ImGui::Text(event.c_str());
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void Metrics_DrawRegionData() {
+@@ -32,8 +33,9 @@
+         for (auto& region : regionAccessList) {
+             ImGui::Text(region.c_str());
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void Metrics_DrawAbilityData() {
+@@ -41,8 +43,9 @@
+         for (auto& ability : learnedAbilities) {
+             ImGui::Text(ability.c_str());
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void Metrics_DrawSeedData() {
+@@ -88,8 +91,9 @@
+             ImGui::EndTable();
+         }
+ 
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void Metrics_DrawTabBar() {
+--- a/src/port/UI/DeveloperTools/GameplayTools.cpp
++++ b/src/port/UI/DeveloperTools/GameplayTools.cpp
+@@ -416,8 +416,9 @@
+             }
+             ImGui::EndTable();
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void DrawGrantUnlocks() {
+@@ -461,8 +462,9 @@
+             }
+             ImGui::EndTable();
+         }
+-        ImGui::EndChild();
+-    }
++    }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void GameplayTools_DrawTabBar() {
+--- a/src/port/UI/DeveloperTools/SaveEditor.cpp
++++ b/src/port/UI/DeveloperTools/SaveEditor.cpp
+@@ -180,8 +180,9 @@
+             ImGui::EndTable();
+         }
+ 
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void SaveEditor_DrawGeneralTab() {
+@@ -281,8 +282,9 @@
+             ImGui::PopID();
+         }
+ 
+-        ImGui::EndChild();
+-    }
++    }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void SaveEditor_DrawProgressTab() {
+@@ -350,8 +352,9 @@
+         }
+         ImGui::PopStyleVar(1);
+ 
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void DrawRandoFlagEditor() {
+@@ -369,8 +372,9 @@
+             }
+             ImGui::PopID();
+         }
+-        ImGui::EndChild();
+     }
++    // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++    ImGui::EndChild();
+ }
+ 
+ void DrawRandoCheckEditor() {
+@@ -466,8 +470,9 @@
+                 }
+                 ImGui::EndTable();
+             }
+-            ImGui::EndChild();
+         }
++        // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++        ImGui::EndChild();
+     }
+ }
+ 
+--- a/src/port/UI/LighthouseModMenuWindow.cpp
++++ b/src/port/UI/LighthouseModMenuWindow.cpp
+@@ -616,16 +616,18 @@
+         if (ImGui::BeginChild("Enabled Mods", ImVec2(0, -8))) {
+             DrawMods(true, shown, alphabetical);
+ 
+-            ImGui::EndChild();
+         }
++        // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++        ImGui::EndChild();
+ 
+         ImGui::TableNextColumn();
+ 
+         if (ImGui::BeginChild("Disabled Mods", ImVec2(0, -8))) {
+             DrawMods(false, shown, alphabetical);
+ 
+-            ImGui::EndChild();
+-        }
++        }
++        // LIGHTHOUSE_IOS (overlay 0047): terminator must be unconditional.
++        ImGui::EndChild();
+ 
+         ImGui::EndTable();
+     }

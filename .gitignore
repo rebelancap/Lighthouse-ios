@@ -1,0 +1,20 @@
+vendor/
+work/
+build*/
+oracle/
+spikes/*-build/
+DerivedData/
+.DS_Store
+__pycache__/
+
+# Game data, in every form it takes — never commit
+*.o2r
+*.z64
+*.n64
+*.v64
+*.prestamp
+
+# Captured artifacts and OTA staging (OTA builds have the remote console
+# compiled in and must never reach a public repo)
+artifacts/
+ota/

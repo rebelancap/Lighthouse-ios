@@ -1,0 +1,47 @@
+Overlay patch 0037: keep SDL_main named SDL_main on iOS.
+
+NUMBERING: 0001-0036 mirror the flagship's patch numbers (same intent, same
+slot). 0037+ are Lighthouse-only patches with no flagship equivalent, so a
+reader can tell at a glance which are inherited and which are ours.
+
+src/port/Game.cpp does:
+
+    /* Rename SDL_main to main for SDL compatibility */
+    #ifdef __GNUC__
+    #define SDL_main main
+    #endif
+
+    int SDL_main(int argc, char* argv[]) {
+
+On desktop clang/gcc that turns the entry point into a plain main(). On iOS
+that is exactly wrong: SDL2main's UIKit shim supplies the real main(), which
+calls UIApplicationMain and then dispatches to SDL_main on the main thread once
+UIKit is up. With the rename in place the game defines its own main(), which
+collides with SDL2main's at link — and if it won the link, UIKit would never be
+initialised at all.
+
+This is the mirror image of the flagship's approach: SoH's entry is a plain
+main() and its patch adds `main=SDL_main`; Lighthouse already renames toward
+main, so we suppress the rename instead. Same destination, opposite direction —
+worth stating because copying SoH's `set_source_files_properties(... main=SDL_main)`
+verbatim here would double-rename and silently produce a binary with no
+SDL_main at all.
+
+Guarded on __IOS__, which the app target defines for the game's TUs (patch
+0004); inert for every desktop build.
+
+--- a/src/port/Game.cpp
++++ b/src/port/Game.cpp
+@@ -271,7 +271,11 @@
+ }
+ 
+ /* Rename SDL_main to main for SDL compatibility */
+-#ifdef __GNUC__
++// LIGHTHOUSE_IOS: never on iOS. SDL2main's UIKit shim owns the real main()
++// (main -> UIApplicationMain -> SDL_main on the main thread once UIKit is
++// live), so SDL_main must keep its name here; renaming it collides with the
++// shim's main() at link, and winning that link would skip UIKit init entirely.
++#if defined(__GNUC__) && !defined(__IOS__)
+ #define SDL_main main
+ #endif
+ 

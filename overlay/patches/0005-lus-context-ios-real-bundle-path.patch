@@ -1,0 +1,65 @@
+Overlay patches:
+0004 — root CMakeLists.txt iOS app target (bundle, shell sources, SDL2_net for
+       co-op, static audio deps, resource bundling, port versioning, console
+       gate) + NEW FILE ios/Info.plist.in.
+0005 — LUS Context.cpp: GetAppBundlePath on iOS must be the REAL .app bundle
+       (read-only resources: lighthouse.o2r, the extractor's assets/ yaml
+       tree), not $HOME/Documents. GetAppDirectoryPath (writable: bk.o2r,
+       config, saves, mods) stays Documents.
+
+Note on upstream's iOS branch: it referenced
+libultraship/ios/{Launch.storyboard,PoweredBy.png,Icon.png,plist.in} — NONE of
+which exist in this fork (`ls libultraship/ios` -> no such directory). So the
+branch could never have configured; it is aspirational scaffolding. We keep its
+shape and replace the dead file references.
+
+All edits are match-count asserted against the PRISTINE vendor state. Patch
+files are OUTPUTS (program rule D9) — regenerate from a clean vendor checkout,
+then run scripts/apply-overlay.sh.
+
+
+--- a/libultraship/src/ship/Context.cpp
++++ b/libultraship/src/ship/Context.cpp
+@@ -1,4 +1,8 @@
+ #include "ship/Context.h"
++#ifdef __IOS__
++#include <CoreFoundation/CoreFoundation.h>
++#include <climits>
++#endif
+ #include "ship/controller/controldevice/controller/mapping/keyboard/KeyboardScancodes.h"
+ #include <cstring>
+ #include <iostream>
+@@ -482,8 +486,31 @@
+ #endif
+ 
+ #ifdef __IOS__
+-    const char* home = getenv("HOME");
+-    return std::string(home) + "/Documents";
++    // LIGHTHOUSE_IOS: the BUNDLE path must be the real read-only .app bundle —
++    // it is where lighthouse.o2r and the extractor's assets/ yaml tree ship.
++    // Returning Documents here made every bundled resource unfindable while
++    // also hiding the writable dir's distinct role. GetAppDirectoryPath()
++    // (writable: bk.o2r, config, saves, mods) still resolves to Documents.
++    {
++        CFBundleRef bundle = CFBundleGetMainBundle();
++        if (bundle != nullptr) {
++            CFURLRef url = CFBundleCopyBundleURL(bundle);
++            if (url != nullptr) {
++                char path[PATH_MAX] = { 0 };
++                const bool ok = CFURLGetFileSystemRepresentation(
++                    url, TRUE, reinterpret_cast<UInt8*>(path), sizeof(path));
++                CFRelease(url);
++                if (ok && path[0] != '\0') {
++                    return std::string(path);
++                }
++            }
++        }
++    }
++    // Fall back to the old behaviour rather than returning empty.
++    {
++        const char* home = getenv("HOME");
++        return home != nullptr ? std::string(home) + "/Documents" : std::string(".");
++    }
+ #endif
+ 
+ #ifdef NON_PORTABLE

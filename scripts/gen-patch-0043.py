@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Overlay patch 0043: decouple audio production from the graphics thread.
+
+NUMBERING: 0037+ are Lighthouse-only. This is this port's answer to SYNC WAVE
+2's audio item ("the evolved audio loop, 2ship's 0024 pattern WITH its
+degeneracy check"), which the series was simply MISSING until a user reported
+crackle on device, most noticeable during music.
+
+ROOT CAUSE, traced rather than assumed. BK's audio manager thread blocks on
+
+    osRecvMesg(&audioManager.audioFrameMsgQ, NULL, OS_MESG_BLOCK)
+
+and produces exactly one audio frame per message received. The only sender is
+`thread5_handleAudioTimerEvent` (core1/graphics_thread.c), fired by a timer
+that the **VI-retrace handler re-arms every second retrace**
+(`audiotimer_trigger & 1`, 280000 cycles ≈ 6 ms). So audio production is
+COUPLED to the graphics thread's cadence — and on iOS the graphics thread is
+the main thread, the same one servicing touches, UIKit, the overlay redraw and
+the display link. When a tick runs long, the timer is re-armed late, no
+message is sent, the audio manager stays blocked, and the SDL queue drains.
+
+This is the same root cause the sibling ports found (2ship 0024: "audio
+production is COUPLED to the game loop's per-tick notify"), in Banjo's shape.
+Sustained music makes it audible where percussive SFX would mask it, which
+matches the report exactly.
+
+MEASURED FIRST, per the charter ("measure YOUR fork's DesiredBuffered before
+trusting any formula"). This fork configures, in Engine.cpp:
+
+    InitAudio({ .SampleRate = 22000, .SampleLength = 736, .DesiredBuffered = 2208 })
+
+2208 frames at 22 kHz is a ~100 ms reservoir, which is generous — so a drain to
+zero is a real stall, not a tight-budget artifact. `SDLAudioPlayer::DoPlay`
+additionally drops anything queued past 6000 frames (~273 ms), which is the
+ceiling the pump must not fight.
+
+WHAT THIS PATCH DOES, in two separable halves:
+
+1. INSTRUMENT (always on). Sample `AudioPlayerBuffered()` on every DAC call and
+   keep a per-window min/max, read and reset by `SohIos_AudioStats`. Overlay
+   0008 reports them as `aud_min` / `aud_max`. **aud_min == 0 is an underrun**,
+   i.e. the ring ran dry and the crackle is real; a healthy window sits near
+   DesiredBuffered. Without this the fix below could only be argued for, not
+   shown, and "it sounds better to me" is exactly the kind of claim this
+   program does not accept.
+
+2. SELF-PUMP (CVar `gSohIos.AudioSelfPump`, default **OFF** as of the device
+   A/B in M-027 — see the status note at the end of this header). A dedicated thread
+   started lazily on the first DAC call — by which point the audio manager
+   thread and its queue definitely exist — that every 4 ms checks the buffer
+   and, ONLY IF it has fallen below DesiredBuffered, posts one frame message.
+
+   THE DEGENERACY CHECK IS THE WHOLE DESIGN. Posting unconditionally would
+   make the game produce faster than it consumes; the buffer would climb to
+   DoPlay's 6000-frame cutoff and frames would be silently DROPPED — trading a
+   drain artifact for an overflow artifact and "fixing" the symptom into a
+   different symptom. Production is gated on `Buffered < DesiredBuffered`, so
+   when the graphics thread is healthy the pump does nothing at all and the
+   original timer keeps every bit of its behaviour.
+
+   The CVar is not decoration: it makes this A/B-able on device from the
+   console bridge in one session, which is how the claim gets checked instead
+   of assumed.
+
+`osSendMesg` is a real mutex/condvar queue in this port (src/port/OS/OS_Mesg.cpp),
+so posting from another thread is safe.
+
+All `__IOS__`-gated: the macOS oracle keeps pristine upstream timing, which is
+what makes it usable as the comparison.
+
+STATUS (device A/B, M-027): the pump changes NOTHING measurable on real
+hardware -- aud_min stayed at 1656 with it on and off, and the crackle was still
+heard crackle either way. The coupling it addresses is real in the code but
+does not starve this port in practice. Its DEFAULT IS THEREFORE OFF: shipping
+an unproven behaviour change enabled would be exactly the kind of "fix" that
+makes a later bisect lie. The instrument half stays on, because it is what
+converted "audio sounds bad" into "the buffer is provably fine, look
+elsewhere" in a single device session. If the pump is not vindicated by a
+future finding, delete it rather than leave it as decoration.
+"""
+import pathlib
+import subprocess
+import tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "vendor/Lighthouse/src/port/OS/OS_AI.cpp"
+REL = "src/port/OS/OS_AI.cpp"
+orig = SRC.read_text()
+
+HEAD_OLD = """#include <cstring>
+#include <vector>
+"""
+HEAD_NEW = """#include <cstring>
+#include <vector>
+
+#ifdef __IOS__
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include "libultraship/libultra/message.h"
+
+// LIGHTHOUSE_IOS (overlay 0043): BK's audio manager produces one frame per
+// message on audioFrameMsgQ, and the only sender is a timer re-armed by the
+// VI-retrace handler on the GRAPHICS thread -- which on iOS is the main
+// thread. A long tick therefore starves audio. See the patch header.
+extern "C" OSMesgQueue* audioManager_getFrameMesgQueue(void);
+
+namespace {
+
+// Per-window buffered-frame extremes, sampled at the DAC. min == 0 means the
+// ring ran dry, i.e. an actual underrun rather than a suspicion.
+std::atomic<int32_t> sLhAudMin{ INT32_MAX };
+std::atomic<int32_t> sLhAudMax{ 0 };
+std::atomic<bool> sLhPumpStarted{ false };
+
+// NOISE-FLOOR PROBE (user report, 2026-08-01: "more of a background static...
+// I hear it more clearly when there is a BREAK between audio noises, and it is
+// always there, faintly, in the background").
+//
+// That description is decisive about the CLASS of defect. A signal-correlated
+// artifact -- resampling, clipping, quantisation -- disappears when the signal
+// does, because resampling digital silence yields digital silence. Noise that
+// survives the gaps is ADDITIVE: something is writing non-zero samples when the
+// synth is producing nothing.
+//
+// So measure exactly that: the quietest buffer the DAC saw this window. If the
+// game ever produces true silence, sLhAudFloor reaches 0. If it bottoms out at
+// some small positive value, that value IS the noise floor, in LSBs of a 16-bit
+// sample -- and 20*log10(floor/32768) converts it straight to dBFS, which says
+// whether it is loud enough to be what is audible.
+std::atomic<int32_t> sLhAudFloor{ INT32_MAX };
+std::atomic<uint32_t> sLhAudSilentBufs{ 0 };
+
+void LhAudioSample(int32_t buffered) {
+    int32_t prevMin = sLhAudMin.load(std::memory_order_relaxed);
+    while (buffered < prevMin &&
+           !sLhAudMin.compare_exchange_weak(prevMin, buffered, std::memory_order_relaxed)) {
+    }
+    int32_t prevMax = sLhAudMax.load(std::memory_order_relaxed);
+    while (buffered > prevMax &&
+           !sLhAudMax.compare_exchange_weak(prevMax, buffered, std::memory_order_relaxed)) {
+    }
+}
+
+// Peak absolute sample in one DAC buffer. Cheap: this runs once per audio
+// frame (~30 Hz), not per sample-block.
+void LhAudioFloor(const int16_t* pcm, size_t frames) {
+    int32_t peak = 0;
+    for (size_t i = 0; i < frames; i++) {
+        int32_t v = pcm[i];
+        if (v < 0) {
+            v = -v;
+        }
+        if (v > peak) {
+            peak = v;
+        }
+    }
+    if (peak == 0) {
+        sLhAudSilentBufs.fetch_add(1, std::memory_order_relaxed);
+    }
+    int32_t prev = sLhAudFloor.load(std::memory_order_relaxed);
+    while (peak < prev &&
+           !sLhAudFloor.compare_exchange_weak(prev, peak, std::memory_order_relaxed)) {
+    }
+}
+
+void LhAudioPumpThread() {
+    OSMesgQueue* q = audioManager_getFrameMesgQueue();
+    // Cache the gate. Reading it every 4 ms would take the CVar lock 250x a
+    // second from a second thread -- and overlay 0030 made that lock a
+    // recursive_mutex precisely because BK's audio thread and the main thread
+    // already contend on it. Re-read a few times a second instead; this is a
+    // debug A/B switch, not a hot path.
+    bool enabled = true;
+    int recheck = 0;
+    for (;;) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(4));
+        if (--recheck <= 0) {
+            recheck = 64; // ~256 ms
+            enabled = CVarGetInteger("gSohIos.AudioSelfPump", 0) != 0;
+        }
+        if (q == nullptr || !enabled) {
+            continue;
+        }
+        // THE DEGENERACY CHECK. Post only when the ring has actually fallen
+        // below target; otherwise the game outruns the DAC, the buffer climbs
+        // to SDLAudioPlayer::DoPlay's 6000-frame cutoff, and frames start
+        // being dropped instead -- an overflow artifact in place of a drain
+        // artifact, which is not a fix.
+        if (AudioPlayerBuffered() < AudioPlayerGetDesiredBuffered()) {
+            osSendMesgPtr(q, NULL, OS_MESG_NOBLOCK);
+        }
+    }
+}
+
+} // namespace
+
+// Read-and-reset, matching the other per-window stat getters overlay 0008
+// consumes. Reports -1 for min when no DAC call happened in the window, so an
+// idle window cannot masquerade as an underrun.
+extern "C" void SohIos_AudioStats(int32_t* outMin, int32_t* outMax) {
+    int32_t mn = sLhAudMin.exchange(INT32_MAX, std::memory_order_relaxed);
+    int32_t mx = sLhAudMax.exchange(0, std::memory_order_relaxed);
+    if (outMin != nullptr) {
+        *outMin = (mn == INT32_MAX) ? -1 : mn;
+    }
+    if (outMax != nullptr) {
+        *outMax = mx;
+    }
+}
+
+// Quietest buffer this window, and how many were bit-exact silence.
+// floor == 0 with silent > 0  -> the path CAN produce true silence; the static
+//                                is signal-correlated after all.
+// floor  > 0 with silent == 0 -> a permanent noise floor of `floor` LSBs. This
+//                                is the reading that would confirm the user's
+//                                description and give it a dBFS number.
+extern "C" void SohIos_AudioFloor(int32_t* outFloor, uint32_t* outSilent) {
+    int32_t fl = sLhAudFloor.exchange(INT32_MAX, std::memory_order_relaxed);
+    uint32_t si = sLhAudSilentBufs.exchange(0, std::memory_order_relaxed);
+    if (outFloor != nullptr) {
+        *outFloor = (fl == INT32_MAX) ? -1 : fl;
+    }
+    if (outSilent != nullptr) {
+        *outSilent = si;
+    }
+}
+#endif
+"""
+n = orig.count(HEAD_OLD)
+assert n == 1, f"[head] expected 1 match, got {n}"
+t = orig.replace(HEAD_OLD, HEAD_NEW)
+
+DAC_OLD = """extern "C" s32 osAiSetNextBuffer(void* buff, size_t len) {
+    static bool sPrimed = false;
+    if (!sPrimed) {
+        sPrimed = true;
+        std::vector<uint8_t> silence((size_t)AudioPlayerGetDesiredBuffered() * 4, 0);
+        AudioPlayerPlayFrame(silence.data(), silence.size());
+    }
+"""
+DAC_NEW = """extern "C" s32 osAiSetNextBuffer(void* buff, size_t len) {
+    static bool sPrimed = false;
+    if (!sPrimed) {
+        sPrimed = true;
+        std::vector<uint8_t> silence((size_t)AudioPlayerGetDesiredBuffered() * 4, 0);
+        AudioPlayerPlayFrame(silence.data(), silence.size());
+    }
+
+#ifdef __IOS__
+    // LIGHTHOUSE_IOS (overlay 0043): sample the ring here -- this is the DAC,
+    // called from the audio manager thread once per produced frame, so it sees
+    // exactly the level the consumer sees.
+    LhAudioSample(AudioPlayerBuffered());
+    // len is BYTES of interleaved stereo s16; measure the peak over all of it.
+    LhAudioFloor((const int16_t*)buff, len / sizeof(int16_t));
+    // Start the pump lazily: reaching this function proves the audio manager
+    // thread is running and its message queue exists.
+    if (!sLhPumpStarted.exchange(true, std::memory_order_relaxed)) {
+        std::thread(LhAudioPumpThread).detach();
+    }
+#endif
+"""
+n = t.count(DAC_OLD)
+assert n == 1, f"[dac] expected 1 match, got {n}"
+t = t.replace(DAC_OLD, DAC_NEW)
+
+with tempfile.NamedTemporaryFile("w", suffix=".a", delete=False) as fa, \
+     tempfile.NamedTemporaryFile("w", suffix=".b", delete=False) as fb:
+    fa.write(orig)
+    fb.write(t)
+    fa.flush()
+    fb.flush()
+    r = subprocess.run(["diff", "-u", "--label", f"a/{REL}", "--label", f"b/{REL}",
+                        fa.name, fb.name], capture_output=True)
+assert r.returncode == 1
+out = ROOT / "overlay/patches/0043-lighthouse-audio-decouple-from-gfx-thread.patch"
+out.write_text(__doc__ + "\n" + r.stdout.decode())
+print(f"wrote {out}")

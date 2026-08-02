@@ -1,0 +1,62 @@
+Overlay patch 0033: skybox stereo sentinels (Banjo-Kazooie's sky.c).
+
+BK's sky is drawn CENTRED ON THE CAMERA — `sky_draw` literally does
+`viewport_getPosition_vec3f(position)` and then `modelRender_draw(..., position,
+...)` for each of the three sky layers. So the per-eye camera shift CANCELS for
+it: the sky lands at zero disparity, i.e. exactly on the panel plane, while the
+terrain recedes behind it. Occlusion says "farthest", stereo says "nearest", and
+the brain refuses. The flagship hit this on device and the sm64coopdx port hit
+it before that; both describe it the same way, as disorienting clouds.
+
+The fix is infinity disparity for skybox draws — skew only, no eye translation —
+which requires the interpreter to KNOW which triangles are sky. Bracket the sky
+model emission with G_NOOP sentinel tags; overlay 0031's noop handler flips a
+flag between them, and clears it defensively at every Run start.
+
+Opcode check, done rather than assumed: this tree builds with `F3DEX_GBI=1`
+(root CMakeLists), NOT F3DEX_GBI_2, so gbi.h's `#else` branch applies and
+`G_NOOP` is 0xc0. LUS maps `F3DEX_G_NOOP = OPCODE(0xc0)` to
+`gfx_noop_handler_f3dex2` (interpreter.cpp), which is the handler 0031 patches.
+Tags 0x5A / 0x5B sit in w0 bits 16-23, where the handler's `C0(16, 8)` reads
+them; 7 and 8 are already taken by LUS's own disp-stack tags.
+
+Note the sentinels bracket only the MODEL draws, not the fallback
+`drawRectangle2D` backdrop — that one is a 2D orthographic pass, which 0031's
+perspective test already leaves alone (and therefore already sits correctly on
+the panel plane).
+
+Two extra display-list commands, `__IOS__`-gated. Desktop and macOS-oracle
+skybox output is byte-identical to upstream.
+
+--- a/src/core2/gc/sky.c
++++ b/src/core2/gc/sky.c
+@@ -99,6 +99,14 @@
+         }
+         viewport_setRenderViewportAndPerspectiveMatrix(gfx, mtx);
+         viewport_getPosition_vec3f(position);
++#ifdef __IOS__
++        /* LIGHTHOUSE_IOS (overlay 0033): stereo skybox BEGIN sentinel. */
++        {
++            Gfx *lhTag = (*gfx)++;
++            lhTag->words.w0 = (uintptr_t)((G_NOOP << 24) | (0x5A << 16));
++            lhTag->words.w1 = 0;
++        }
++#endif
+         for (i = 0; i < 3; i++) {
+             sky_model_bin = gcSky.model_bins[i];
+             if (sky_model_bin) {
+@@ -108,6 +116,14 @@
+                 modelRender_draw(gfx, mtx, position, rotation, gcSky.sky_info->sky_list[i].scale, NULL, sky_model_bin);
+             }
+         }
++#ifdef __IOS__
++        /* LIGHTHOUSE_IOS (overlay 0033): stereo skybox END sentinel. */
++        {
++            Gfx *lhTag = (*gfx)++;
++            lhTag->words.w0 = (uintptr_t)((G_NOOP << 24) | (0x5B << 16));
++            lhTag->words.w1 = 0;
++        }
++#endif
+     } else {
+         drawRectangle2D(gfx, 0, 0, (f32) gFramebufferWidth, (f32) gFramebufferHeight, 0, 0, 0);
+     }

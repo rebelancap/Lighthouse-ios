@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""Overlay patch 0017: the iOS settings section (Settings → iOS).
+
+SYNC WAVE 1 specifies the sections and knobs; this is that spec rendered in
+Lighthouse's own menu framework, which is SoH-lineage (`AddSidebarEntry` /
+`AddWidget` / `WidgetPath` / `*Options` builders), so it ports by idiom rather
+than by rewrite.
+
+Sections and knobs:
+  Touch Controls — Double-Tap Z to Lock · Haptic Feedback (Off/Light/Strong) ·
+                   Touch Control Opacity (30–100 %) · Left-Handed Layout ·
+                   Stick Response (Linear/Precise) · Customize Layout…
+  Display        — Max Frame Rate (60/120) · Supersampling (1.00–2.00) + the
+                   truth line · Performance HUD
+  Advanced       — Async Shader Compilation · Remote Console (gated)
+
+Defaults are read from the shell so the menu cannot disagree with the code that
+consumes them: ZDoubleTap 1, Haptics 1 (Light), TouchOpacity 1.0, LeftyFlip 0,
+StickCurve 0 (Linear), MaxFps 120, Supersample 0.0→clamped to 1.0, PerfHud 0,
+AsyncShaders 1, RemoteConsole 0.
+
+**Menu Scale is deliberately ABSENT.** Wave 1 lists it, but nothing in this
+port reads `gSohIos.MenuScale` — the flagship's 0015 implements it game-side in
+`OTRGlobals.cpp`, which has no analogue here yet. Shipping the slider now would
+be a knob that does nothing. It arrives with its own patch or not at all; the
+menu already renders at a sane scale on the iPhone Air (artifacts/sim/
+pack-loaded.png).
+
+**Supersampling carries a truth line.** Wave 2 item D: every port shipped
+sub-native, so any older "renders at native resolution" text is now wrong. The
+label states what is actually happening.
+
+TRAPS OBSERVED
+* `ComboMap` here takes `std::unordered_map<int32_t, const char*>` —
+  Lighthouse diverges from the flagship, whose menu wants `std::map`. Recorded
+  in SHELL-DIVERGENCES.
+* `CVarCombobox` stores the map **KEY** in the CVar. Haptics and Stick Response
+  are index-keyed (0/1/2 and 0/1) because the shell reads them as indices; **Max
+  Frame Rate is VALUE-keyed (60/120)** because the shell reads it as a real
+  frame rate. Getting this backwards writes 0/1 into MaxFps and caps the display
+  link to 0 fps — caught by comparing every default against the shell.
+* Value-keyed ComboMaps risk `comboMap.at(stale)` throwing on menu open. MaxFps
+  is safe because its only writable values are exactly its keys and the default
+  (120) is one of them; no public build ever wrote a different encoding.
+* The remote-console widget is `#if SOH_REMOTE_CONSOLE` (D-040) so public
+  builds do not show a toggle for a bridge that was compiled out.
+
+Match-count asserted against the pristine vendor state."""
+import subprocess, pathlib, tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "vendor/Lighthouse/src/port/UI/LighthouseMenuSettings.cpp"
+REL = "src/port/UI/LighthouseMenuSettings.cpp"
+orig = SRC.read_text()
+
+BLOCK = '''
+#ifdef __IOS__
+    // ---------------------------------------------------------------------
+    // LIGHTHOUSE_IOS (overlay 0017): the iOS settings section.
+    // Every CVar here is consumed by app/ios/SohIosShell.m; the defaults below
+    // mirror that file exactly so the menu can never disagree with the code
+    // that reads them.
+    // ---------------------------------------------------------------------
+    path.sidebarName = "iOS";
+    path.column = SECTION_COLUMN_1;
+    AddSidebarEntry("Settings", path.sidebarName, 1);
+
+    AddWidget(path, "Touch Controls", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Double-Tap Z to Lock", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.ZDoubleTap")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(true).Tooltip(
+            "Z is held only while your thumb is down. Double-tap it to LOCK it held, "
+            "and tap again to release.\\n\\nBanjo-Kazooie holds Z constantly — crouch, "
+            "Talon Trot and Wonderwing all end when Z is released — so locking saves "
+            "your thumb on long stretches.\\n\\nNote: in mid-air a Z press is a Beak "
+            "Buster, so the first tap of a double-tap will trigger one."));
+    AddWidget(path, "Haptic Feedback", WIDGET_CVAR_COMBOBOX)
+        .CVar("gSohIos.Haptics")
+        .RaceDisable(false)
+        .Options(ComboboxOptions()
+                     .ComboMap(sIosHapticsOptions)
+                     .DefaultIndex(1)
+                     .Tooltip("Vibration when you press an on-screen button."));
+    AddWidget(path, "Touch Control Opacity", WIDGET_CVAR_SLIDER_FLOAT)
+        .CVar("gSohIos.TouchOpacity")
+        .RaceDisable(false)
+        .Options(FloatSliderOptions()
+                     .Min(0.3f)
+                     .Max(1.0f)
+                     .DefaultValue(1.0f)
+                     .IsPercentage()
+                     .Tooltip("How visible the on-screen buttons are."));
+    AddWidget(path, "Left-Handed Layout", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.LeftyFlip")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Mirrors the touch layout left-to-right, including any custom layout you have saved."));
+    AddWidget(path, "Stick Response", WIDGET_CVAR_COMBOBOX)
+        .CVar("gSohIos.StickCurve")
+        .RaceDisable(false)
+        .Options(ComboboxOptions()
+                     .ComboMap(sIosStickCurveOptions)
+                     .DefaultIndex(0)
+                     .Tooltip("Linear moves 1:1 with your thumb. Precise eases the centre of "
+                              "the stick for finer aiming, at the cost of a slower ramp to full tilt."));
+    AddWidget(path, "Customize Layout...", WIDGET_BUTTON)
+        .RaceDisable(false)
+        .Callback([](WidgetInfo& info) { CVarSetInteger("gSohIos.EditLayout", 1); })
+        .Options(ButtonOptions().Tooltip(
+            "Drag any button (and the stick's home position) to move it, scale the whole "
+            "layout, or hide buttons you don't use. Save or reset from the on-screen chrome."));
+
+    AddWidget(path, "Hold A to Skip Dialog", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.DialogHoldSkip")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(true).Tooltip(
+            "Holding A fast-forwards through dialog instead of advancing one page per "
+            "tap. It repeats the normal advance rather than jumping ahead, so "
+            "anything the game does when a conversation ends -- move unlocks, Jiggy and "
+            "note-door dances -- still happens."));
+
+    AddWidget(path, "Menu", WIDGET_SEPARATOR_TEXT);
+    // LIGHTHOUSE_IOS (0045): the family-wide menu-scale slider. B8 recorded
+    // this as "not applicable here" because I searched for the flagship's
+    // SYMBOL (OTRGlobals::ScaleImGui) instead of its MECHANISM;
+    // GameEngine::ScaleImGui is the same thing under another name. Default
+    // 0.85 matches every sibling.
+    AddWidget(path, "Menu Scale", WIDGET_CVAR_SLIDER_FLOAT)
+        .CVar("gSohIos.MenuScale")
+        .RaceDisable(false)
+        .Callback([](WidgetInfo& info) { GameEngine::Instance->ScaleImGui(); })
+        .Options(FloatSliderOptions()
+                     .Tooltip("Size of this menu and its text. Applies immediately.")
+                     .ShowButtons(true)
+                     .IsPercentage()
+                     .Min(0.6f)
+                     .Max(1.2f)
+                     .DefaultValue(0.85f));
+
+    AddWidget(path, "Display", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Max Frame Rate", WIDGET_CVAR_COMBOBOX)
+        .CVar("gSohIos.MaxFps")
+        .RaceDisable(false)
+        .Options(ComboboxOptions()
+                     .ComboMap(sIosMaxFpsOptions)
+                     .DefaultIndex(120) // defaultIndex is used as the default VALUE
+                     .Tooltip("Caps how fast the game may render. 120 needs a ProMotion "
+                              "display; on a 60 Hz screen both settings behave the same."));
+#if TARGET_OS_VISION
+    // LIGHTHOUSE_IOS (0017, visionOS): the panel window renders at a 3840
+    // long edge, already about 2x the angular resolution the headset can
+    // resolve for a window that size -- the known oversampling optimum. An
+    // SSAA factor above 1.0 on top of that is GPU spend with nothing to show
+    // for it, so there is no slider here. A truth line beats a hidden or
+    // greyed-out control: someone who owns both an iPhone and a Vision Pro
+    // will otherwise go looking for the setting they remember.
+    // ASCII ONLY in widget strings -- the menu atlas has no em-dash or
+    // bullet and renders them as '?'.
+    AddWidget(path, "Supersampling: automatic", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Render Scale", WIDGET_CVAR_COMBOBOX)
+        .CVar("gSohIos.VisionLongEdge")
+        .RaceDisable(false)
+        .Options(ComboboxOptions()
+                     .ComboMap(sIosVisionScaleOptions)
+                     .DefaultIndex(3840) // defaultIndex is used as the default VALUE
+                     .Tooltip("Long-edge resolution the game renders at. The window "
+                              "supersamples either way, so 85% is usually "
+                              "indistinguishable and buys headroom for a locked frame "
+                              "rate."));
+#else
+    AddWidget(path, "Supersampling", WIDGET_CVAR_SLIDER_FLOAT)
+        .CVar("gSohIos.Supersample")
+        .RaceDisable(false)
+        .Options(FloatSliderOptions()
+                     .Min(1.00f)
+                     .Max(2.00f)
+                     .DefaultValue(1.00f)
+                     .Format("%.2fx")
+                     .Tooltip("Renders above the screen's resolution and scales down, which "
+                              "removes shimmer on edges.\\n\\n1.00x already renders at your "
+                              "display's full native resolution. Higher values cost GPU time."));
+#endif
+    AddWidget(path, "Performance HUD", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.PerfHud")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Shows frame rate and thermal state in the corner of the screen."));
+
+    AddWidget(path, "Advanced", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Async Shader Compilation", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.AsyncShaders")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(true).Tooltip(
+            "Builds Metal shaders off the render thread. Leave this on — turning it off "
+            "brings back multi-frame stalls the first time each effect appears."));
+#if SOH_REMOTE_CONSOLE
+    AddWidget(path, "Remote Console", WIDGET_CVAR_CHECKBOX)
+        .CVar("gSohIos.RemoteConsole")
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Developer feature: opens an unauthenticated command server on your local "
+            "network. Leave off unless you were asked to turn it on."));
+#endif
+#endif // __IOS__
+
+'''
+
+COMBOS = '''
+#ifdef __IOS__
+// LIGHTHOUSE_IOS (overlay 0017): TARGET_OS_VISION is used below and again in
+// the widget block to split iPhone from Vision Pro. Include the header that
+// defines it EXPLICITLY rather than relying on it arriving transitively --
+// an undefined TARGET_OS_VISION evaluates to 0 in #if, so a missing include
+// would silently give the headset the iPhone's controls instead of failing.
+#include <TargetConditionals.h>
+// Combo maps for the iOS section. Keyed by
+// contiguous indices from 0 — a value-keyed map would make comboMap.at() throw
+// on any persisted value whose meaning later changed (menu-open abort).
+// NOTE: this fork's ComboMap takes std::unordered_map, unlike the flagship's.
+static const std::unordered_map<int32_t, const char*> sIosHapticsOptions = {
+    { 0, "Off" }, { 1, "Light" }, { 2, "Strong" }
+};
+static const std::unordered_map<int32_t, const char*> sIosStickCurveOptions = {
+    { 0, "Linear" }, { 1, "Precise" }
+};
+// VALUE-keyed on purpose, unlike the two above: the shell reads this CVar as an
+// actual frame rate (CVarGetInteger("gSohIos.MaxFps", 120)), and CVarCombobox
+// stores the map KEY. An index-keyed map here would write 0/1 and the shell
+// would cap the display link to 0 fps.
+static const std::unordered_map<int32_t, const char*> sIosMaxFpsOptions = {
+    { 60, "60 FPS" }, { 120, "120 FPS" }
+};
+#if TARGET_OS_VISION
+// Also VALUE-keyed, same reason: the shell reads gSohIos.VisionLongEdge as a
+// pixel count when it sizes the metal layer's contentsScale.
+static const std::unordered_map<int32_t, const char*> sIosVisionScaleOptions = {
+    { 2880, "75% (2880)" }, { 3264, "85% (3264)" }, { 3840, "100% (3840, 4K)" }
+};
+#endif
+#endif // __IOS__
+
+'''
+
+# 1) combo maps ahead of AddMenuSettings
+anchor_fn = "void LighthouseMenu::AddMenuSettings() {"
+n = orig.count(anchor_fn)
+assert n == 1, f"[combos-anchor] expected 1 match, got {n}"
+t = orig.replace(anchor_fn, COMBOS + anchor_fn)
+
+# 2) the section itself, immediately after General / before Audio.
+# Position is deliberate. AddSidebarEntry's third argument is a COLUMN COUNT,
+# not a priority — sidebar order is insertion order. Placed at the end (before
+# Mod Menu) the "iOS" entry fell BELOW THE FOLD on an iPhone Air: the sidebar
+# fits 7 of 9 entries, so the port's own settings were unreachable unless menu
+# scrolling worked (M-012). Second in the list is also simply right: on a phone
+# these are the settings a user reaches for most.
+# Anchor on the COMMENT + first assignment, not on AddSidebarEntry itself: the
+# pristine code sets path.sidebarName = "Audio" BEFORE that call, so inserting
+# after it would leave path pointing at "iOS" and silently merge every Audio
+# widget into the iOS section.
+anchor_audio = '''    // Audio Settings
+    path.sidebarName = "Audio";
+'''
+n = t.count(anchor_audio)
+assert n == 1, f"[section-anchor] expected 1 match, got {n}"
+t = t.replace(anchor_audio, BLOCK + anchor_audio)
+
+with tempfile.NamedTemporaryFile("w", suffix=".a", delete=False) as fa, \
+     tempfile.NamedTemporaryFile("w", suffix=".b", delete=False) as fb:
+    fa.write(orig); fb.write(t); fa.flush(); fb.flush()
+    r = subprocess.run(["diff", "-u", "--label", f"a/{REL}", "--label", f"b/{REL}",
+                        fa.name, fb.name], capture_output=True, text=True)
+assert r.returncode == 1
+out = ROOT / "overlay/patches/0017-lighthouse-ios-settings-section.patch"
+out.write_text(__doc__ + "\n\n" + r.stdout)
+print(f"wrote {out}")

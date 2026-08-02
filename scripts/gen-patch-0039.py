@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Overlay patch 0039: fix a null-dereference crash when the app is launched
+with ANY command-line argument.
+
+`GameEngine::RunExtract` collects argv into a vector:
+
+    if (argc > 1) {
+        for (int i = 1; i < argc; i++) {
+            args.push_back(argv[argc]);   // <-- argv[argc], not argv[i]
+        }
+    }
+
+`argv[argc]` is **guaranteed to be NULL** by the C standard (C11 5.1.2.2.1:
+"argv[argc] shall be a null pointer"). Constructing a `std::string` from a null
+`const char*` is undefined behaviour and in practice strlen()s address 0.
+
+Device-confirmed on the iOS simulator, 2026-07-31 — the first crash this port
+ever produced:
+
+    EXC_BAD_ACCESS (SIGSEGV), KERN_INVALID_ADDRESS at 0x0000000000000000
+      libsystem_platform.dylib  _platform_strlen
+      Lighthouse                GameEngine::RunExtract(int, char**)
+      Lighthouse                GameEngine::Create(int, char**)
+      Lighthouse                SDL_main
+      Lighthouse                -[SDLUIKitDelegate postFinishLaunch]
+      ...                       UIApplicationMain / SDL_UIKitRunApp
+
+Latent on desktop only because people rarely pass arguments to a game binary.
+It is far more reachable on iOS: anything that hands the process an argument
+trips it on a cold start, before any window exists, so the user sees the app
+bounce off the springboard with no UI and no in-app crash.txt.
+
+Fix is `argv[i]`. Upstreamable as-is; there is no behaviour here worth
+preserving.
+
+Match-count asserted against the pristine vendor state."""
+import subprocess, pathlib, tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "vendor/Lighthouse/src/port/Engine.cpp"
+REL = "src/port/Engine.cpp"
+orig = SRC.read_text()
+
+old = """    if (argc > 1) {
+        for (int i = 1; i < argc; i++) {
+            args.push_back(argv[argc]);
+        }
+    }
+"""
+new = """    if (argc > 1) {
+        for (int i = 1; i < argc; i++) {
+            // LIGHTHOUSE_IOS (0039): was argv[argc], which the C standard
+            // guarantees is NULL — constructing a std::string from it
+            // strlen()s address 0. Crashed on every argument-bearing launch.
+            args.push_back(argv[i]);
+        }
+    }
+"""
+
+n = orig.count(old)
+assert n == 1, f"expected 1 match, got {n}"
+t = orig.replace(old, new)
+
+with tempfile.NamedTemporaryFile("w", suffix=".a", delete=False) as fa, \
+     tempfile.NamedTemporaryFile("w", suffix=".b", delete=False) as fb:
+    fa.write(orig); fb.write(t); fa.flush(); fb.flush()
+    r = subprocess.run(["diff", "-u", "--label", f"a/{REL}", "--label", f"b/{REL}",
+                        fa.name, fb.name], capture_output=True, text=True)
+assert r.returncode == 1
+out = ROOT / "overlay/patches/0039-lighthouse-argv-null-deref.patch"
+out.write_text(__doc__ + "\n\n" + r.stdout)
+print(f"wrote {out}")

@@ -1,0 +1,90 @@
+Overlay patch 0022: visionOS platform dispatch.
+
+The leetal toolchain sets CMAKE_SYSTEM_NAME=visionOS for
+PLATFORM=SIMULATOR_VISIONOS / VISIONOS, but the whole tree (upstream
+Lighthouse + LUS + this port's overlay CMake) dispatches on
+STREQUAL "iOS" at a dozen-plus sites. Rather than patch every site, flip
+CMAKE_SYSTEM_NAME back to "iOS" right after project(): by then the
+compilers, the sysroot (xros / xrsimulator) and Xcode's SDKROOT are
+locked, so the flip only affects dispatch conditionals. The real
+visionOS-ness keeps coming from the SDK (TARGET_OS_VISION == 1 in
+TargetConditionals.h). LIGHTHOUSE_VISIONOS stays a normal variable for
+genuinely vision-specific deltas (device family, plist, Swift entry).
+
+The flip has to happen THREE times because each project()/toolchain
+re-entry resets it:
+  1. after the top-level project()
+  2. after libultraship's own project()
+  3. after LUS includes ios-toolchain-populate.cmake (which re-runs
+     leetal's platform init in that scope)
+
+Deployment target: CMake then emits IPHONEOS_DEPLOYMENT_TARGET, which
+Xcode ignores for xros — scripts/build-vision-sim.sh and
+scripts/build-visionos.sh compensate with
+CMAKE_XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET.
+
+No-op for iOS/macOS builds: the condition is never true there.
+
+Divergence from the flagship's 0022 (recorded rather than silently
+dropped): the flagship also language-scopes a top-level
+-fno-fast-math/-ffp-contract genex so the Xcode generator does not feed
+those C driver flags to swiftc. Lighthouse's root CMakeLists has NO such
+global add_compile_options — the only ones are inside the
+ENABLE_ASAN block, which is OFF — so that hunk has no anchor here and is
+correctly absent. If a future upstream bump introduces one, swiftc will
+hard-error and this comment is the pointer to the fix.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -4,6 +4,17 @@
+ 
+ # Set the project version and language
+ project(Lighthouse VERSION 1.0.0 LANGUAGES C CXX ASM)
++
++# LIGHTHOUSE_IOS (overlay 0022): visionOS builds (PLATFORM=VISIONOS /
++# SIMULATOR_VISIONOS) dispatch as iOS throughout the tree. The compilers and
++# the SDK are already fixed by the toolchain at this point; only the
++# STREQUAL "iOS" conditionals care. TARGET_OS_VISION (from the xros SDK)
++# remains the source-level discriminator.
++if(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
++    set(CMAKE_SYSTEM_NAME "iOS")
++    set(IOS 1)
++    set(LIGHTHOUSE_VISIONOS 1)
++endif()
+ include(FetchContent)
+ 
+ include(cmake/lighthouse-cvars.cmake)
+--- a/libultraship/CMakeLists.txt
++++ b/libultraship/CMakeLists.txt
+@@ -19,6 +19,15 @@
+ 
+ project(libultraship LANGUAGES C CXX)
+ 
++# LIGHTHOUSE_IOS (overlay 0022): this project() re-ran the toolchain,
++# resetting CMAKE_SYSTEM_NAME to visionOS — re-flip so this subtree keeps
++# dispatching as iOS (see the top-level CMakeLists hunk).
++if(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
++    set(CMAKE_SYSTEM_NAME "iOS")
++    set(IOS 1)
++    set(LIGHTHOUSE_VISIONOS 1)
++endif()
++
+ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     enable_language(OBJCXX)
+     set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} -fobjc-arc")
+@@ -75,6 +84,15 @@
+ # === Platform Specific Configuration ===
+ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+     include(cmake/ios-toolchain-populate.cmake)
++    # LIGHTHOUSE_IOS (overlay 0022): the toolchain include above re-ran
++    # leetal's platform init IN THIS SCOPE, resetting CMAKE_SYSTEM_NAME to
++    # visionOS again — re-flip a third time so src/ (compile definitions,
++    # __IOS__) dispatches as iOS.
++    if(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
++        set(CMAKE_SYSTEM_NAME "iOS")
++        set(IOS 1)
++        set(LIGHTHOUSE_VISIONOS 1)
++    endif()
+ endif()
+ 
+ # =========== Sources =============

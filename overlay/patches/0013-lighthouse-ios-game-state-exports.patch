@@ -1,0 +1,131 @@
+Overlay patch 0013: game-state exports the iOS shell links against.
+
+The shared shell (app/ios/SohIosShell.m) declares seven externs the GAME must
+provide. They are what let the touch layer behave correctly without the shell
+ever reading game memory itself:
+
+    SohIos_IsMenuOpen      -> auto-hide the touch overlay while a menu is up
+    SohIos_IsPopupOpen     -> yield ALL touches while an ImGui popup is open
+                              (fixed-stick zones AND floating-stick regions
+                              both ate popup buttons on real fingers)
+    SohIos_IsGamePaused    -> show the menu chip while paused
+    SohIos_IsTitleOrDemo   -> show the menu chip at title/demo, hide it in play
+    SohIos_ActiveSeqIds    -> music diagnostic over the console bridge
+    SohIos_QueueMenuScroll -> mouse-free menu scrolling (consumed by 0018)
+    SohIos_HasEnteredGameplay -> keep the menu chip alive through boot/intro
+    SohIos_IsIntroPlaying     -> hide the touch layer over the intro video
+
+BK-specific mappings (this is where the port diverges from SoH, whose
+pauseCtx/gPlayState globals do not exist here — Lighthouse's own menu code
+still carries "TODO" stubs where gPlayState would go):
+
+    paused      = getGameMode() == GAME_MODE_4_PAUSED
+    title/demo  = GAME_MODE_7_ATTRACT_DEMO or GAME_MODE_9_BANJO_AND_KAZOOIE
+                  (the attract demo and the title/logo mode)
+    menu open   = Ship::Context Gui::GetMenuOrMenubarVisible()
+    popup open  = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup)
+
+Two are deliberately staged rather than faked:
+  * SohIos_HudStats is NOT here — overlay 0008 (the perf probe) owns it, since
+    it is the thing that actually has the number. 0013 briefly carried a 0.0f
+    stub while 0008 was pending; that stub is gone rather than left to collide.
+  * SohIos_QueueMenuScroll accumulates here; patch 0018 applies the queued
+    (x, dy) via ImGui::SetScrollY inside each scrollable BeginChild. Wheel
+    injection is a known dead end (tooltips + slider jumps), so the queue is
+    the interface between the two patches.
+
+Match-count asserted against the pristine vendor state.
+
+--- a/src/port/Engine.cpp
++++ b/src/port/Engine.cpp
+@@ -1,4 +1,5 @@
+ #include "Engine.h"
++#include "port/UI/LighthouseGui.hpp"
+ #include <algorithm>
+ #include <filesystem>
+ #include <fstream>
+@@ -1666,5 +1667,84 @@
+             MemoryPool.erase(it);
+             break;
+         }
++    }
++}
++
++// ---------------------------------------------------------------------------
++// LIGHTHOUSE_IOS (overlay 0013): game-state exports for the iOS app shell.
++// File-scope extern "C" on purpose — a block-scope linkage spec does not
++// compile in C++, and block-scope externs namespace-mangle (both cost the
++// flagship a debugging session). The shell never reads game memory; it asks
++// these questions and gets a plain int back.
++// ---------------------------------------------------------------------------
++extern "C" {
++
++int SohIos_IsMenuOpen(void) {
++    auto ctx = Ship::Context::GetRawInstance();
++    if (ctx == nullptr) {
++        return 0;
++    }
++    auto gui = ctx->GetWindow() != nullptr ? ctx->GetWindow()->GetGui() : nullptr;
++    return (gui != nullptr && gui->GetMenuOrMenubarVisible()) ? 1 : 0;
++}
++
++int SohIos_IsPopupOpen(void) {
++    return ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopup) ? 1 : 0;
++}
++
++int SohIos_IsGamePaused(void) {
++    return getGameMode() == GAME_MODE_4_PAUSED ? 1 : 0;
++}
++
++int SohIos_IsTitleOrDemo(void) {
++    const s32 mode = getGameMode();
++    return (mode == GAME_MODE_7_ATTRACT_DEMO || mode == GAME_MODE_9_BANJO_AND_KAZOOIE) ? 1 : 0;
++}
++
++// Has the player reached actual gameplay yet? STICKY: once BK reaches
++// GAME_MODE_3_NORMAL it stays true for the session. The shell uses it to keep
++// the menu chip visible through boot logos, intro and file-select — none of
++// which are "paused" or "title/demo", so the chip used to vanish exactly when a
++// new user needed it (user report, device, 2026-07-31).
++static bool sLhEnteredGameplay = false;
++
++int SohIos_HasEnteredGameplay(void) {
++    if (!sLhEnteredGameplay && getGameMode() == GAME_MODE_3_NORMAL) {
++        sLhEnteredGameplay = true;
+     }
++    return sLhEnteredGameplay ? 1 : 0;
+ }
++
++// Is the non-interactive boot-logo / intro sequence on screen? BK's pre-title
++// modes are 1 and 2 (the decomp still calls them UNKNOWN). Reported in the perf
++// line as `mode=` so this heuristic can be checked on a device rather than
++// assumed — if the intro turns out to use another mode, widen it there.
++// Used to hide the touch layer over a video that takes no input.
++int SohIos_IsIntroPlaying(void) {
++    if (SohIos_HasEnteredGameplay()) {
++        return 0;
++    }
++    const s32 mode = getGameMode();
++    return (mode == GAME_MODE_1_UNKNOWN || mode == GAME_MODE_2_UNKNOWN) ? 1 : 0;
++}
++
++// Music diagnostic for the console bridge. BK's sequence player does not expose
++// a SoH-style active-sequence bitfield; wired to 0 until the audio work maps
++// one, so `seq` over the bridge answers honestly instead of guessing.
++uint32_t SohIos_ActiveSeqIds(void) {
++    return 0;
++}
++
++// Mouse-free menu scrolling. The shell queues a finger-x-targeted (x, dy);
++// overlay 0018 drains it inside each scrollable BeginChild via ImGui::SetScrollY.
++// Injecting wheel events instead is a dead end: it fires tooltips and makes
++// sliders jump.
++float gSohIosScrollX = 0.0f;
++float gSohIosScrollDy = 0.0f;
++
++void SohIos_QueueMenuScroll(float x, float dy) {
++    gSohIosScrollX = x;
++    gSohIosScrollDy += dy;
++}
++
++} // extern "C"

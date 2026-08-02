@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Overlay patch 0040: make the iOS "Max Frame Rate" setting actually cap the
+engine, not just the display link.
+
+## The gap
+
+`GameEngine::GetInterpolationFPS()` decides how many frames the engine renders
+per 30 Hz game tick:
+
+    MatchRefreshRate -> the window's reported refresh rate
+    else vsync       -> min(refresh, InterpolationFPS)
+    else             -> InterpolationFPS
+
+Nothing in that chain consults `gSohIos.MaxFps`. The shell reads it to set the
+CADisplayLink's preferred frame rate, so picking "60 FPS" on a ProMotion phone
+would slow the *presentation* while the engine kept interpolating for 120 —
+rendering ~4 sub-frames per tick and throwing half of them away. Wave 1
+specifies this knob as "capping the match-refresh path"; this is the missing
+half.
+
+## Why it is worth having even at 60
+
+`MatchRefreshRate` is **on by default** (observed at runtime: `gSettings.
+MatchRefreshRate=1`), so the engine follows whatever the display reports. That
+makes the cap the only user-facing control over engine-side render cost, and it
+is the first thing to reach for if the device runs hot.
+
+## Measurement that motivated it
+
+On the simulator the engine honours its target exactly — wall p50 tracked the
+target with a hard clamp (p50≈p95≈p99≈max), and changing only the target moved
+wall from **50.9 ms → 34.3 ms** (fps 19.8 → 27.1) with `gpu_ms` idle at 0.05
+throughout (MEASUREMENTS M-013). So the target genuinely drives the frame
+budget, which is exactly why the user-facing cap must reach it.
+
+Inert off iOS. Clamped to sane values so a corrupt CVar cannot stall the engine.
+
+Match-count asserted against the pristine vendor state."""
+import subprocess, pathlib, tempfile
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SRC = ROOT / "vendor/Lighthouse/src/port/Engine.cpp"
+REL = "src/port/Engine.cpp"
+orig = SRC.read_text()
+
+old = """uint32_t GameEngine::GetInterpolationFPS() {
+    if (CVarGetInteger(CVAR_SETTING("MatchRefreshRate"), 0)) {
+        return Ship::Context::GetRawInstance()->GetWindow()->GetCurrentRefreshRate();
+
+    } else if (CVarGetInteger(CVAR_VSYNC_ENABLED, 1) ||
+               !Ship::Context::GetRawInstance()->GetWindow()->CanDisableVerticalSync()) {
+        return std::min<uint32_t>(Ship::Context::GetRawInstance()->GetWindow()->GetCurrentRefreshRate(),
+                                  CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 60));
+    }
+
+    return CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 30);
+}
+"""
+
+new = """uint32_t GameEngine::GetInterpolationFPS() {
+    uint32_t lhFps;
+    if (CVarGetInteger(CVAR_SETTING("MatchRefreshRate"), 0)) {
+        lhFps = Ship::Context::GetRawInstance()->GetWindow()->GetCurrentRefreshRate();
+
+    } else if (CVarGetInteger(CVAR_VSYNC_ENABLED, 1) ||
+               !Ship::Context::GetRawInstance()->GetWindow()->CanDisableVerticalSync()) {
+        lhFps = std::min<uint32_t>(Ship::Context::GetRawInstance()->GetWindow()->GetCurrentRefreshRate(),
+                                   CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 60));
+    } else {
+        lhFps = CVarGetInteger(CVAR_SETTING("InterpolationFPS"), 30);
+    }
+
+#ifdef __IOS__
+    // LIGHTHOUSE_IOS (overlay 0040): apply the user's Max Frame Rate choice to
+    // the ENGINE, not just the display link. MatchRefreshRate is on by default,
+    // so without this the engine follows the panel (120 on ProMotion) and
+    // interpolates sub-frames the display link then discards. Value-keyed CVar:
+    // it holds a real frame rate (60 / 120), matching what the shell reads.
+    {
+        int32_t lhCap = CVarGetInteger("gSohIos.MaxFps", 120);
+        if (lhCap < 30) {
+            lhCap = 30; // never stall the engine on a corrupt or stale value
+        }
+        if (lhFps > (uint32_t)lhCap) {
+            lhFps = (uint32_t)lhCap;
+        }
+    }
+#endif
+
+    return lhFps;
+}
+"""
+
+n = orig.count(old)
+assert n == 1, f"expected 1 match, got {n}"
+t = orig.replace(old, new)
+
+with tempfile.NamedTemporaryFile("w", suffix=".a", delete=False) as fa, \
+     tempfile.NamedTemporaryFile("w", suffix=".b", delete=False) as fb:
+    fa.write(orig); fb.write(t); fa.flush(); fb.flush()
+    r = subprocess.run(["diff", "-u", "--label", f"a/{REL}", "--label", f"b/{REL}",
+                        fa.name, fb.name], capture_output=True, text=True)
+assert r.returncode == 1
+out = ROOT / "overlay/patches/0040-lighthouse-ios-maxfps-caps-engine.patch"
+out.write_text(__doc__ + "\n\n" + r.stdout)
+print(f"wrote {out}")
