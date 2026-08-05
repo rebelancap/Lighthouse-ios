@@ -2,8 +2,9 @@ Overlay patch 0046: hold A to fast-forward dialog.
 
 NUMBERING: 0037+ are Lighthouse-only.
 
-REQUESTED AFTER DEVICE TESTING: a way to skip in-game dialog, prompted by
-reports online that an L + R + B combo does it (it does not).
+User request: "is there a way to bind a button to SKIP over in-game dialog? I
+read online that maybe L + R + B can skip dialog, but it doesn't work in
+Lighthouse."
 
 FINDINGS FIRST. There is no such combo, in this port or in the game. Upstream
 Lighthouse ships six cutscene skips (`Cutscenes.SkipBootLogos`,

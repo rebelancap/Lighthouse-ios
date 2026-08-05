@@ -69,7 +69,7 @@ All `__IOS__`-gated: the macOS oracle keeps pristine upstream timing, which is
 what makes it usable as the comparison.
 
 STATUS (device A/B, M-027): the pump changes NOTHING measurable on real
-hardware -- aud_min stayed at 1656 with it on and off, and the crackle was still
+hardware -- aud_min stayed at 1656 with it on and off, and the user still
 heard crackle either way. The coupling it addresses is real in the code but
 does not starve this port in practice. Its DEFAULT IS THEREFORE OFF: shipping
 an unproven behaviour change enabled would be exactly the kind of "fix" that
@@ -127,7 +127,7 @@ std::atomic<bool> sLhPumpStarted{ false };
 // game ever produces true silence, sLhAudFloor reaches 0. If it bottoms out at
 // some small positive value, that value IS the noise floor, in LSBs of a 16-bit
 // sample -- and 20*log10(floor/32768) converts it straight to dBFS, which says
-// whether it is loud enough to be what is audible.
+// whether it is loud enough to be what the user is hearing.
 std::atomic<int32_t> sLhAudFloor{ INT32_MAX };
 std::atomic<uint32_t> sLhAudSilentBufs{ 0 };
 

@@ -8,7 +8,7 @@ NUMBERING: 0037+ are Lighthouse-only.
 B8 recorded that the flagship's "Menu Scale" slider was deliberately NOT
 shipped here, because the flagship applies it through
 `OTRGlobals::ScaleImGui()` "which has no analogue here". That was wrong, and
-device testing caught it: `GameEngine::ScaleImGui()` (src/port/Engine.cpp:1056) is
+the user caught it: `GameEngine::ScaleImGui()` (src/port/Engine.cpp:1056) is
 structurally identical — same preset-index CVar, same
 `previousImGuiScale` ratio tracking, same live `ScaleAllSizes` +
 `FontGlobalScale` application. I searched for the flagship's SYMBOL instead of

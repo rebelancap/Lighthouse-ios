@@ -162,7 +162,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void Metrics_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/GameplayTools.cpp
 +++ b/src/port/UI/DeveloperTools/GameplayTools.cpp
-@@ -416,8 +416,9 @@
+@@ -417,8 +417,9 @@
              }
              ImGui::EndTable();
          }
@@ -173,7 +173,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawGrantUnlocks() {
-@@ -461,8 +462,9 @@
+@@ -494,8 +495,9 @@
              }
              ImGui::EndTable();
          }

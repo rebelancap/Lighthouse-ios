@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build-ios"
 PREFIX="$ROOT/work/ios-deps/prefix"
 PORT_O2R="$ROOT/oracle/shiphome/lighthouse.o2r"
-TEAM="${LIGHTHOUSE_IOS_TEAM:?set LIGHTHOUSE_IOS_TEAM to your Apple Developer Team ID}"
+TEAM="${LIGHTHOUSE_IOS_TEAM:-57G8J46Z2T}"
 JOBS="${JOBS:-6}"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }

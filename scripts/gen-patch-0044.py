@@ -34,7 +34,7 @@ because `GameEngine_GetSampleRate` has no caller. That was wrong -- the synth
 rate is set independently, and the next section is what I found when I checked
 instead of assuming.)
 
-THE PART THAT WAS WRONG FIRST, and why this patch has three hunks instead of one.
+THE PART I GOT WRONG FIRST, and why this patch has three hunks instead of one.
 The output rate is set in TWO independent places that must agree, and moving
 only the device side silently drifts the queue:
 
@@ -138,11 +138,20 @@ eng_t = eng_orig.replace(OLD, NEW)
 # because overlay 0043 already owns hunks in that file, and two patches writing
 # inside one hunk's context window breaks the other's reverse-apply (learned
 # twice: 0038/0041, then 0042/0013).
-# Anchored ABOVE the first USE (FinishInit calls InitAudio ~line 391), not
-# next to the other extern "C" helpers 1300 lines below -- C++ needs the
-# declaration first, and `extern "C"` cannot be declared at block scope, so
-# there is nowhere inside FinishInit to put it.
-HELPER_OLD = """void GameEngine::FinishInit() {
+# Anchored ABOVE the first USE, not next to the other extern "C" helpers 1300
+# lines below -- C++ needs the declaration first, and `extern "C"` cannot be
+# declared at block scope, so there is nowhere inside the calling function to
+# put it.
+#
+# The anchor was `void GameEngine::FinishInit() {` until the 1.0.2 bump, when
+# upstream 9f3f30b1 ("Init audio before menu") moved the InitAudio call OUT of
+# FinishInit and into the constructor ~175 lines earlier. The helper kept
+# regenerating cleanly (its anchor still matched, and so did InitAudio's) but
+# now sat BELOW its only caller: "use of undeclared identifier
+# 'LhIos_AudioRate'". Anchor on the constructor instead, which is what actually
+# contains the call -- if a future bump moves it again, this same error is the
+# signal, and the fix is to re-anchor on the new enclosing function.
+HELPER_OLD = """GameEngine::GameEngine() {
 """
 HELPER_NEW = """#ifdef __IOS__
 // LIGHTHOUSE_IOS (overlay 0044): the one audio-rate knob, cached so the synth
@@ -161,7 +170,7 @@ extern "C" int32_t LhIos_AudioRate(void) {
 }
 #endif
 
-void GameEngine::FinishInit() {
+GameEngine::GameEngine() {
 """
 n = eng_t.count(HELPER_OLD)
 assert n == 1, f"[helper] expected 1 match, got {n}"

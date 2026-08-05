@@ -58,10 +58,12 @@ EDITS = {
         # texture mapped across all of it, so Width and Height were an anamorphic
         # STRETCH of the picture.
         #
-        # The first fix fitted the image inside the box at the source aspect. That
-        # was wrong: a fitted rectangle derives one edge from the other, so the two
-        # sliders stopped being independent. What is wanted is what the 2D window
-        # already does — the panel free to be made as skinny or as wide as you like.
+        # My first fix fitted the image inside the box at the source aspect. The
+        # user rejected it, correctly: "if you make it TALLER, it also makes it
+        # WIDER" — because a fitted rectangle derives one edge from the other, so
+        # the two sliders stopped being independent. What was asked for is what
+        # the 2D window already does: "the user should be able to make the screen
+        # super skinny or super wide just like they can in the 2d panel".
         #
         # In the 2D window, resizing does not letterbox and does not stretch — the
         # ENGINE RE-RENDERS at the new aspect, so a wider window shows more world.
@@ -146,11 +148,11 @@ EDITS = {
     ],
     "SohVisionApp.swift": [
         # DEPTH RESCALE (user, device, 2026-08-01). The old scale ran 0-200%
-        # with 100% = 0.0325 eye-offset fraction; device testing found the upper half
+        # with 100% = 0.0325 eye-offset fraction; the user found the upper half
         # unusable and settled around 75%. Rescale so the OLD 150% becomes the
         # new maximum:  new% = old% * 200/150,  hence old 75% == new 100%.
         # The per-100% constant becomes 0.0325 * 0.75 = 0.024375, so the new
-        # default of 100% is exactly the setting chosen by hand on device.
+        # default of 100% is exactly the setting the user chose by hand.
         #
         # The 0-200% / 100%-default CONVENTION is program-wide (playbook 2.2)
         # and is preserved untouched; only what 100% physically MEANS changes,

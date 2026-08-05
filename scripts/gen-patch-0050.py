@@ -6,7 +6,7 @@ NUMBERING: 0037+ are Lighthouse-only.
 FOUND BY AUDIT (2026-08-01), after the ROM-hack work in 0048/0049 left one
 observation unexplained: declining the first-run local scan landed instantly on
 "No ROM O2R file detected. Please generate a ROM O2R and relaunch." with no file
-browser ever appearing. That was first attributed to the browser failing to open. It was
+browser ever appearing. I attributed that to the browser failing to open. It was
 not. Two separate defects produce it, and neither is the browser.
 
 DEFECT 1 — the baserom fast-path accepts a ROM it cannot extract.

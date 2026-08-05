@@ -160,8 +160,8 @@ is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.s
 patch is produced by a generator in `scripts/gen-patch-*.py` that asserts its match counts,
 so a silent no-op edit fails the build). The iOS/visionOS app shell lives in `app/ios/`.
 
-Each patch carries its own rationale in the generator's docstring — why the change
-exists, what was tried first, and what it is measured against.
+Design notes and the full engineering history are in `DECISIONS.md`, `MEASUREMENTS.md`,
+and `docs/`.
 
 ## Credits & license
 

@@ -229,7 +229,7 @@ extern uint32_t SohIos_ActiveSeqIds(void);
 // Any ImGui popup open (overlay 0013): overlay yields all input to it.
 extern int SohIos_IsPopupOpen(void);
 
-// First-run fidelity defaults for this device (device testing):
+// First-run fidelity defaults for this device (user feedback 2026-07-10):
 // pace to the display's refresh (120 on ProMotion) and render at 200%
 // internal resolution. Versioned so later builds can seed more without
 // clobbering user changes; only ever runs when the marker is absent.
@@ -278,7 +278,7 @@ static void SohIos_SeedDefaultsOnce(void) {
         CVarSetInteger("gSohIos.VisionLongEdge", 3840);
     }
 #endif
-    // v5 (LIGHTHOUSE, device testing): START already skips cutscenes,
+    // v5 (LIGHTHOUSE, user request 2026-07-31): START already skips cutscenes,
     // but upstream gates every skip behind an enhancement that ships OFF — so
     // pressing START did nothing and the intro felt unskippable. Seed them on.
     // SkipBootLogos also covers the Lighthouse intro video.
@@ -1358,7 +1358,7 @@ static NSString* SohIos_LayoutKey(NSString* label);
 // name; connects are logged so device runs self-document any mismatch.
 static BOOL SohIos_PhysicalControllerPresent(void) {
     // visionOS included: with no pad paired, show the touch controls —
-    // pinch-taps make them usable enough to navigate menus (device testing).
+    // pinch-taps make them usable enough to navigate menus (user request).
     // Real pads enumerate normally on the headset; the "Gamepad" filter
     // below handles the simulator's synthetic entry.
     for (GCController* c in GCController.controllers) {
@@ -1909,7 +1909,7 @@ void SohIos_RestoreWindowTo(CGSize target) {
         _perfHud.hidden = NO;
         float fps = 0;
         SohIos_HudStats(&fps);
-        // Just the number (device testing); thermal only when it matters.
+        // Just the number (user feedback); thermal only when it matters.
         int th = SohIos_ThermalState();
         if (th >= 2) {
             _perfHud.text = [NSString stringWithFormat:@"%.0f \u2022 HOT", fps];

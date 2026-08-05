@@ -5,7 +5,7 @@ SetupScreenFramebuffer receives the CALLER's cached width/height but binds
 the freshly acquired drawable as the colour attachment. During a live
 window resize the drawable's real size differs from those cached values, so
 the depth texture — sized from the stale numbers — mismatches the colour
-attachment and Metal aborts on render-pass validation. Device testing saw the
+attachment and Metal aborts on render-pass validation. The user saw the
 app restarting to the intro repeatedly while dragging the window corner.
 
 The acquired drawable is the ground truth; derive width/height from its

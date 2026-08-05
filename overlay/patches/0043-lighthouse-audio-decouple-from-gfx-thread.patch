@@ -68,7 +68,7 @@ All `__IOS__`-gated: the macOS oracle keeps pristine upstream timing, which is
 what makes it usable as the comparison.
 
 STATUS (device A/B, M-027): the pump changes NOTHING measurable on real
-hardware -- aud_min stayed at 1656 with it on and off, and the crackle was still
+hardware -- aud_min stayed at 1656 with it on and off, and the user still
 heard crackle either way. The coupling it addresses is real in the code but
 does not starve this port in practice. Its DEFAULT IS THEREFORE OFF: shipping
 an unproven behaviour change enabled would be exactly the kind of "fix" that
@@ -117,7 +117,7 @@ future finding, delete it rather than leave it as decoration.
 +// game ever produces true silence, sLhAudFloor reaches 0. If it bottoms out at
 +// some small positive value, that value IS the noise floor, in LSBs of a 16-bit
 +// sample -- and 20*log10(floor/32768) converts it straight to dBFS, which says
-+// whether it is loud enough to be what is audible.
++// whether it is loud enough to be what the user is hearing.
 +std::atomic<int32_t> sLhAudFloor{ INT32_MAX };
 +std::atomic<uint32_t> sLhAudSilentBufs{ 0 };
 +
@@ -220,7 +220,7 @@ future finding, delete it rather than leave it as decoration.
  extern "C" u32 osAiGetLength(void) {
      int32_t excess = AudioPlayerBuffered() - AudioPlayerGetDesiredBuffered();
      return excess > 0 ? (u32)excess * 4 : 0;
-@@ -33,6 +167,20 @@
+@@ -46,6 +180,20 @@
          AudioPlayerPlayFrame(silence.data(), silence.size());
      }
  
@@ -238,6 +238,6 @@ future finding, delete it rather than leave it as decoration.
 +    }
 +#endif
 +
-     float masterVol = CVarGetInteger(CVAR_SETTING("Volume.Master"), 100) / 100.0f;
+     float masterVol = CVarGetInteger(CVAR_SETTING("Volume.Master"), 40) / 100.0f;
      if (masterVol >= 1.0f) {
          AudioPlayerPlayFrame((const uint8_t*)buff, len);

@@ -84,7 +84,7 @@ code will still be missing that code, which is what the prompt says.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -706,7 +706,46 @@
+@@ -719,7 +719,46 @@
                  } else {
                      bool open = true;
                      std::string msg = "File\n" + std::string(file) + "\nis not a ROM or does not match supported ROMs.";

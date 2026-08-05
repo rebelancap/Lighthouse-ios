@@ -55,7 +55,7 @@ list. Per program D-041 the menu is display-only in 3D.
  #include "fast/resource/ResourceType.h"
  #include <fast/resource/factory/DisplayListFactory.h>
  #include <fast/resource/factory/TextureFactory.h>
-@@ -1238,6 +1241,18 @@
+@@ -1252,6 +1255,18 @@
  long long sLastSubFrameNs = 0;
  long long sPassBudgetNs = 0;
  } // namespace
@@ -74,7 +74,7 @@ list. Per program D-041 the menu is display-only in 3D.
  
  void GameEngine::RunCommands(Gfx* Commands, const std::vector<std::unordered_map<Mtx*, MtxF>>& mtx_replacements,
                               size_t frameCount) {
-@@ -1275,6 +1290,80 @@
+@@ -1299,6 +1314,80 @@
              auto runT0 = Clock::now();
              auto gui = wndBase->GetGui();
              wndBase->GetMouseStateManager()->StartFrame();

@@ -111,14 +111,23 @@ BLOCK = '''
             "Drag any button (and the stick's home position) to move it, scale the whole "
             "layout, or hide buttons you don't use. Save or reset from the on-screen chrome."));
 
-    AddWidget(path, "Hold A to Skip Dialog", WIDGET_CVAR_CHECKBOX)
+    // LABEL FIX: this said "Hold A to Skip Dialog", which is not what it does.
+    // It fast-forwards -- it repeats the normal advance, so every page still
+    // renders. Someone holding A expecting the conversation to vanish reads that
+    // as the feature being broken, and asks for the feature they already have.
+    //
+    // The CVar keeps its original name on purpose. It is persisted, and renaming
+    // it would silently reset anyone who had turned this OFF back to the default
+    // ON -- churning saved user state to fix a string is a bad trade.
+    AddWidget(path, "Hold A to Fast-Forward Dialog", WIDGET_CVAR_CHECKBOX)
         .CVar("gSohIos.DialogHoldSkip")
         .RaceDisable(false)
         .Options(CheckboxOptions().DefaultValue(true).Tooltip(
-            "Holding A fast-forwards through dialog instead of advancing one page per "
-            "tap. It repeats the normal advance rather than jumping ahead, so "
-            "anything the game does when a conversation ends -- move unlocks, Jiggy and "
-            "note-door dances -- still happens."));
+            "Holding A runs through dialog quickly instead of advancing one page "
+            "per tap. It is a fast-forward, not a skip: it repeats the normal "
+            "advance, so anything the game does when a conversation ends -- move "
+            "unlocks, Jiggy and note-door dances -- still happens. Banjo-Kazooie "
+            "has no dialog skip; cutscenes are separate and do skip."));
 
     AddWidget(path, "Menu", WIDGET_SEPARATOR_TEXT);
     // LIGHTHOUSE_IOS (0045): the family-wide menu-scale slider. B8 recorded

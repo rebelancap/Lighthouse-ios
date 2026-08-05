@@ -1,20 +1,38 @@
+# Vendored upstream working tree — reconstructed by scripts/bootstrap.sh
+# (pinned clone with its own .git). The pin lives in bootstrap.sh; local
+# changes live in overlay/patches/.
 vendor/
+
+# Local game data working copy (never commit — large, user-owned)
 work/
+
+# Build outputs
 build*/
-oracle/
+oracle/build/
 spikes/*-build/
 DerivedData/
 .DS_Store
-__pycache__/
 
-# Game data, in every form it takes — never commit
+# Game data, in every form it takes. bk.o2r.prestamp reached HEAD once
+# because gitignore does not untrack what is already tracked — it carried
+# 16,288 extracted Banjo-Kazooie assets, which must never be published.
 *.o2r
 *.z64
 *.n64
 *.v64
 *.prestamp
+oracle/shiphome/
 
-# Captured artifacts and OTA staging (OTA builds have the remote console
-# compiled in and must never reach a public repo)
-artifacts/
+# Captured artifacts — keep the dir, ignore the heavy contents (flagship
+# convention). docs/screenshots/ is the exception: those ARE published.
+artifacts/**/*.png
+artifacts/**/*.jpg
+artifacts/**/*.mov
+artifacts/**/*.mp4
+artifacts/**/*.trace
+artifacts/**/*.log
+artifacts/**/*.ipa
+
+# OTA hosting dir — IPAs, rebuildable, and OTA builds have the remote console
+# COMPILED IN, so they must never reach a public repo.
 ota/

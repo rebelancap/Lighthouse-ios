@@ -195,7 +195,7 @@ never leaves 0; the macOS oracle compiles none of it.
  }
  
 +// EYE-GEOMETRY HASH (overlay 0031 rev4) -- the falsifiable instrument this
-+// bug has lacked through four failed fixes. The flicker was reported to be
++// bug has lacked through four failed fixes. The user reports the flicker is
 +// visible with ONE EYE CLOSED, so a single view's CONTENT alternates; and
 +// "objects at two locations" is GEOMETRY, which lives in CPU memory here
 +// (Fast3D transforms vertices on the CPU into mVertexBufferPool). So hash
@@ -745,7 +745,7 @@ never leaves 0; the macOS oracle compiles none of it.
 +        sSoh3DAimMix += ((gSoh3DAiming ? 1.0f : 0.0f) - sSoh3DAimMix) * 0.15f;
 +    }
 +    auto sohCvars = Ship::Context::GetRawInstance()->GetConsoleVariables();
-+    // Depth default 0.024375, NOT the flagship 0.0325. Rescaled on device
++    // Depth default 0.024375, NOT the flagship 0.0325. The user rescaled
 +    // the slider so the OLD 150% became the new 200% maximum, which makes
 +    // the new 100% equal the old 75% -- the value they had settled on by
 +    // hand. 0.0325 * 0.75 = 0.024375. SohVisionApp.swift applies the same

@@ -133,7 +133,7 @@ Match-count asserted against the pristine vendor state.
  extern std::unordered_map<s16, const char*> warpPointSceneList;
  
  namespace LighthouseGui {
-@@ -780,6 +821,25 @@
+@@ -787,6 +828,25 @@
                      menu->ToggleVisibility();
                  }
                  Ship::Context::GetRawInstance()->GetWindow()->Close();
@@ -159,7 +159,7 @@ Match-count asserted against the pristine vendor state.
              },
              nullptr);
      }
-@@ -845,6 +905,9 @@
+@@ -852,6 +912,9 @@
      ImGui::SetNextWindowSizeConstraints({ sidebarWidth, 0 }, { sidebarWidth, columnHeight });
      ImGui::BeginChild((menuEntries.at(headerIndex).label + " Section").c_str(), { sidebarWidth, columnHeight * 3 },
                        ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysAutoResize, ImGuiWindowFlags_NoTitleBar);
@@ -169,7 +169,7 @@ Match-count asserted against the pristine vendor state.
      for (auto& sidebarLabel : menuEntries.at(headerIndex).sidebarOrder) {
          std::string nextIndex = "";
          UIWidgets::PushStyleButton(menuThemeIndex);
-@@ -889,6 +952,9 @@
+@@ -896,6 +959,9 @@
          ImGui::SetNextWindowSizeConstraints({ sectionWidth, 0 }, { sectionWidth, columnHeight });
          ImGui::BeginChild(sectionMenuId.c_str(), { sectionWidth, windowHeight * 4 }, ImGuiChildFlags_AutoResizeY,
                            ImGuiWindowFlags_NoTitleBar);
@@ -179,7 +179,7 @@ Match-count asserted against the pristine vendor state.
      }
      if (headerSearch && menuSearchText.length() > 0) {
          ImGui::AlignTextToFramePadding();
-@@ -926,6 +992,9 @@
+@@ -933,6 +999,9 @@
                  ImGui::SetNextWindowSizeConstraints({ columnWidth, 0 }, { columnWidth, columnHeight });
                  ImGui::BeginChild(sectionId.c_str(), { columnWidth, windowHeight * 4 }, ImGuiChildFlags_AutoResizeY,
                                    ImGuiWindowFlags_NoTitleBar);

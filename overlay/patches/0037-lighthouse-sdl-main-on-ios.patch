@@ -32,7 +32,7 @@ Guarded on __IOS__, which the app target defines for the game's TUs (patch
 
 --- a/src/port/Game.cpp
 +++ b/src/port/Game.cpp
-@@ -271,7 +271,11 @@
+@@ -272,7 +272,11 @@
  }
  
  /* Rename SDL_main to main for SDL compatibility */

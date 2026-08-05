@@ -37,7 +37,12 @@ import sys
 import zipfile
 from pathlib import Path
 
-DEFAULT_VERSION = "1.0.0"
+# Fallback only. The real caller (scripts/extract-bk-o2r.sh) reads the
+# authoritative value out of the pinned vendor's CMakeLists at run time, so
+# this constant is what a bare manual invocation gets. Kept in step with the
+# pin (upstream 1.0.2 as of 2026-08-05) so a hand run cannot stamp a stale
+# version. Only major/minor are compared by VerifyArchiveVersion.
+DEFAULT_VERSION = "1.0.2"
 RECORD_NAME = "portVersion"
 
 

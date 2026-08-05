@@ -33,7 +33,7 @@ because `GameEngine_GetSampleRate` has no caller. That was wrong -- the synth
 rate is set independently, and the next section is what I found when I checked
 instead of assuming.)
 
-THE PART THAT WAS WRONG FIRST, and why this patch has three hunks instead of one.
+THE PART I GOT WRONG FIRST, and why this patch has three hunks instead of one.
 The output rate is set in TWO independent places that must agree, and moving
 only the device side silently drifts the queue:
 
@@ -76,8 +76,8 @@ produced a given recording.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -350,6 +350,23 @@
-     }
+@@ -138,6 +138,23 @@
+     return version.major == gBuildVersionMajor && version.minor == gBuildVersionMinor;
  }
  
 +#ifdef __IOS__
@@ -97,13 +97,13 @@ produced a given recording.
 +}
 +#endif
 +
- void GameEngine::FinishInit() {
-     for (const auto& archive : sRomArchives) {
-         std::string romPath = Ship::Context::LocateFileAcrossAppDirs(archive, "bk");
-@@ -384,7 +401,32 @@
-     context->InitCrashHandler();
-     context->InitEventSystem();
+ GameEngine::GameEngine() {
+     this->context = Ship::Context::CreateUninitializedInstance("Lighthouse", "bk", "lighthouse.cfg.json");
  
+@@ -178,7 +195,32 @@
+ 
+     lhFast3dWindow = std::make_shared<Fast::Fast3dWindow>(std::vector<std::shared_ptr<Ship::GuiWindow>>({}));
+     this->context->InitWindow(lhFast3dWindow);
 +#ifdef __IOS__
 +    // LIGHTHOUSE_IOS (overlay 0044): ONE knob for all three coupled values.
 +    // See the patch header -- the synth rate, the frame size and the device
@@ -131,8 +131,8 @@ produced a given recording.
      this->context->InitAudio({ .SampleRate = 22000, .SampleLength = 736, .DesiredBuffered = 2208 });
 +#endif
  
-     lhFast3dWindow->SetTargetFps(60);
-     lhFast3dWindow->SetMaximumFrameLatency(1);
+     LighthouseGui::SetupMenu();
+ 
 --- a/src/core1/audio_manager.c
 +++ b/src/core1/audio_manager.c
 @@ -308,7 +308,17 @@

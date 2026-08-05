@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/spikes/lighthouse-sim-build/Release-iphonesimulator/Lighthouse.app"
 # D8 — this session's OWN simulator. Never boot a sibling session's.
-UDID="${LIGHTHOUSE_SIM_UDID:?set LIGHTHOUSE_SIM_UDID to your iOS Simulator UDID (xcrun simctl list devices)}"
+UDID="${LIGHTHOUSE_SIM_UDID:-DB38CE9F-5A98-4723-B2D3-40BFE2AC922F}"
 BUNDLE_ID="com.rebelancap.lighthouse"
 SHOT="${1:-$ROOT/artifacts/sim/boot-$(date -u +%Y%m%d-%H%M%S).png}"
 

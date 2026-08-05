@@ -101,7 +101,7 @@ namespace LighthousePerf {
 // the demo's OWN recorded VI divisor (usually 3 -> 20 Hz, pfsmanager.c ->
 // port_setDemoViCount; "Replay modes never interpolate" in RunCommands).
 // Dividing by a hardcoded 30 there reported entirely correct behaviour as a
-// 33% sim shortfall, and it was escalated as a defect before
+// 33% sim shortfall, and I escalated that to the user as a defect before
 // reading the code. sim_ratio must be measured against the rate the engine is
 // ACTUALLY targeting this tick, or it cries wolf on every non-gameplay screen.
 static constexpr double kLogicHz = 30.0;

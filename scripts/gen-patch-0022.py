@@ -36,6 +36,7 @@ correctly absent. If a future upstream bump introduces one, swiftc will
 hard-error and this comment is the pointer to the fix.
 """
 import pathlib
+import re
 import subprocess
 import tempfile
 
@@ -78,9 +79,14 @@ def unified(rel, before, after):
 # --- 1. top-level CMakeLists ------------------------------------------------
 SRC = ROOT / "vendor/Lighthouse/CMakeLists.txt"
 orig = SRC.read_text()
-OLD = "project(Lighthouse VERSION 1.0.0 LANGUAGES C CXX ASM)\n"
-n = orig.count(OLD)
-assert n == 1, f"[project-anchor] expected 1 match, got {n}"
+# The version in project() moves with every upstream release (1.0.0 -> 1.0.2 at
+# the 2026-08-05 bump), so anchoring on the literal string breaks this generator
+# on each one. Match the version loosely and keep the match-count assertion —
+# the point of the assert is "exactly one project() line", not the version.
+PROJECT_RE = re.compile(r"^project\(Lighthouse VERSION [0-9][0-9.]* LANGUAGES C CXX ASM\)\n", re.M)
+found = PROJECT_RE.findall(orig)
+assert len(found) == 1, f"[project-anchor] expected 1 match, got {len(found)}"
+OLD = found[0]
 root_diff = unified("CMakeLists.txt", orig, orig.replace(OLD, OLD + ROOT_FLIP))
 
 # --- 2 + 3. libultraship CMakeLists (two hunks, one file) -------------------

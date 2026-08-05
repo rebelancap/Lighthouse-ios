@@ -11,9 +11,12 @@ VENDOR="$ROOT/vendor/Lighthouse"
 
 # --- D0 pins (see DECISIONS.md) ---------------------------------------------
 LH_REPO="https://github.com/HarbourMasters/Lighthouse.git"
-LH_PIN="6d30df9aa9240b2da393d7a8ac1194fcbfc89156"
+# Upstream release 1.0.2 (2026-08-05). LUS is unchanged from the previous pin —
+# only Lighthouse and Torch moved, which is why the LUS half of the overlay
+# (22 of 45 patches) needed no rebase.
+LH_PIN="e598cfcc21e21b6ff5cdf533098f22539246c770"
 LUS_PIN="2917d0f4fe62c579174561dcd34f327c9410bb72"
-TORCH_PIN="b4b75e6649d66c028f56116f0bf48a119862b1bb"
+TORCH_PIN="f89e944671b406615246685a5a60b65e48ab01f8"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
