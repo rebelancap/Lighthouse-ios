@@ -1,16 +1,7 @@
 #!/bin/bash
-# Build static ogg/vorbis/libpng for iOS (Lighthouse links ogg+vorbis only;
-# opus/opusfile are NOT in its dependency dispatch, so they are not built).
-# Device (arm64) into
-# work/ios-deps/prefix. Predecessor pattern: deps built once, referenced as
-# imported targets by the soh iOS CMake branch (overlay 0004).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-# LIGHTHOUSE_IOS_SDK=device (default) → iphoneos arm64, prefix work/ios-deps/prefix.
-# LIGHTHOUSE_IOS_SDK=simulator        → iphonesimulator arm64, prefix work/ios-sim-deps/prefix.
-# LIGHTHOUSE_IOS_SDK=visionsim        → xrsimulator arm64, prefix work/vision-sim-deps/prefix.
-# LIGHTHOUSE_IOS_SDK=visionos         → xros arm64, prefix work/vision-deps/prefix.
 SDK="${LIGHTHOUSE_IOS_SDK:-device}"
 SYSNAME=iOS
 DEPTGT=15.0
@@ -29,10 +20,6 @@ elif [[ "$SDK" == "visionos" ]]; then
     DEPTGT=2.0
 else
     WORK="$ROOT/work/ios-deps"
-    # Explicit, not empty. macOS ships bash 3.2, where expanding an empty array
-    # as "${arr[@]}" under `set -u` is an UNBOUND VARIABLE error — the device
-    # path died on it immediately. Naming the sysroot is also just clearer than
-    # relying on the toolchain default.
     SYSROOT_FLAG=(-DCMAKE_OSX_SYSROOT=iphoneos)
 fi
 PREFIX="$WORK/prefix"
@@ -70,10 +57,6 @@ build ogg      -DBUILD_TESTING=OFF -DINSTALL_DOCS=OFF
 build vorbis   "-DOGG_INCLUDE_DIR=$PREFIX/include" "-DOGG_LIBRARY=$PREFIX/lib/libogg.a"
 
 echo "=== verify ($SDK) ==="
-# Assert the exact platform so a device slice can never sneak into a sim build
-# (or vice-versa) — that mismatch only surfaces as a confusing app-link error.
-# otool may print the platform as a name (IOS/IOSSIMULATOR) or its numeric
-# code (2=IOS, 7=IOSSIMULATOR) depending on toolchain version — accept both.
 case "$SDK" in
     simulator) WANT="IOSSIMULATOR|7" ;;
     visionos)  WANT="XROS|11" ;;

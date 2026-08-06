@@ -19,7 +19,7 @@ StickCurve 0 (Linear), MaxFps 120, Supersample 0.0→clamped to 1.0, PerfHud 0,
 AsyncShaders 1, RemoteConsole 0.
 
 **Menu Scale is deliberately ABSENT.** Wave 1 lists it, but nothing in this
-port reads `gSohIos.MenuScale` — the flagship's 0015 implements it game-side in
+port reads `gSohIos.MenuScale` — the Ship of Harkinian port 0015 implements it game-side in
 `OTRGlobals.cpp`, which has no analogue here yet. Shipping the slider now would
 be a knob that does nothing. It arrives with its own patch or not at all; the
 menu already renders at a sane scale on the iPhone Air (artifacts/sim/
@@ -31,7 +31,7 @@ label states what is actually happening.
 
 TRAPS OBSERVED
 * `ComboMap` here takes `std::unordered_map<int32_t, const char*>` —
-  Lighthouse diverges from the flagship, whose menu wants `std::map`. Recorded
+  Lighthouse diverges from the Ship of Harkinian port, whose menu wants `std::map`. Recorded
   in SHELL-DIVERGENCES.
 * `CVarCombobox` stores the map **KEY** in the CVar. Haptics and Stick Response
   are index-keyed (0/1/2 and 0/1) because the shell reads them as indices; **Max
@@ -64,7 +64,7 @@ Match-count asserted against the pristine vendor state.
 +// Combo maps for the iOS section. Keyed by
 +// contiguous indices from 0 — a value-keyed map would make comboMap.at() throw
 +// on any persisted value whose meaning later changed (menu-open abort).
-+// NOTE: this fork's ComboMap takes std::unordered_map, unlike the flagship's.
++// NOTE: this fork's ComboMap takes std::unordered_map, unlike the Ship of Harkinian port.
 +static const std::unordered_map<int32_t, const char*> sIosHapticsOptions = {
 +    { 0, "Off" }, { 1, "Light" }, { 2, "Strong" }
 +};
@@ -172,7 +172,7 @@ Match-count asserted against the pristine vendor state.
 +
 +    AddWidget(path, "Menu", WIDGET_SEPARATOR_TEXT);
 +    // LIGHTHOUSE_IOS (0045): the family-wide menu-scale slider. B8 recorded
-+    // this as "not applicable here" because I searched for the flagship's
++    // this as "not applicable here" because I searched for the Ship of Harkinian port
 +    // SYMBOL (OTRGlobals::ScaleImGui) instead of its MECHANISM;
 +    // GameEngine::ScaleImGui is the same thing under another name. Default
 +    // 0.85 matches every sibling.

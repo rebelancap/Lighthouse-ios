@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# One command: pristine vendor -> overlay -> signed visionOS DEVICE build.
-# Produces build-visionos/Release-xros/Lighthouse.app
-# The iOS build (build-ios/) and the vision simulator build (build-vision-sim/)
-# are untouched — three separate build dirs, one source tree.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD="$ROOT/build-visionos"
 PREFIX="$ROOT/work/vision-deps/prefix"
 PORT_O2R="$ROOT/oracle/shiphome/lighthouse.o2r"
-TEAM="${LIGHTHOUSE_IOS_TEAM:-57G8J46Z2T}"
+TEAM="${LIGHTHOUSE_IOS_TEAM:?set your Apple Developer team id (see README)}"
 JOBS="${JOBS:-6}"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -20,9 +16,6 @@ info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
 [ -f "$PREFIX/lib/libvorbisfile.a" ] || LIGHTHOUSE_IOS_SDK=visionos "$ROOT/scripts/build-audio-deps-ios.sh"
 [ -f "$PORT_O2R" ] || die "missing $PORT_O2R — run scripts/build-oracle.sh (GeneratePortO2R)"
 
-# SYNC WAVE 2 trap — see build-ios.sh: `xcodebuild archive` leaves a dangling
-# symlink where the regular-build product goes, and the next build dies with an
-# "unable to create directory" that has nothing to do with permissions.
 APP_PATH="$BUILD/Release-xros/Lighthouse.app"
 if [ -L "$APP_PATH" ]; then
     info "clearing archive-poisoned product symlink"
@@ -39,9 +32,6 @@ BUILDNO="$(date -u +%Y%m%d%H%M)"
 CONSOLE="${LIGHTHOUSE_REMOTE_CONSOLE:-ON}"
 info "lighthouse visionOS $VERSION (build $BUILDNO), remote console: $CONSOLE"
 
-# STRIP_INSTALLED_PRODUCT=NO is not cosmetic: the crash handler resolves its own
-# backtrace at RUNTIME, so a stripped binary ships address-only crash.txt files.
-# publish-ota.sh asserts the symbol count for exactly this reason.
 cmake --no-warn-unused-cli -S "$ROOT/vendor/Lighthouse" -B "$BUILD" -GXcode \
     -DCMAKE_SYSTEM_NAME=visionOS -DPLATFORM=VISIONOS \
     -DCMAKE_OSX_SYSROOT=xros \
@@ -66,8 +56,6 @@ cmake --build "$BUILD" --config Release --target Lighthouse --parallel "$JOBS" -
 APP="$BUILD/Release-xros/Lighthouse.app"
 [ -d "$APP" ] || die "expected app at $APP"
 codesign -dv "$APP" 2>&1 | sed -n '1,3p'
-# Substitute, don't pipe — see build-vision-sim.sh: `nm | grep -q` SIGPIPEs nm
-# and pipefail reports a failure on a perfectly good binary.
 SWIFT_ENTRY=$(nm "$APP/Lighthouse" 2>/dev/null | grep -c "SohVisionApp" || true)
 [ "$SWIFT_ENTRY" -gt 0 ] || die "no Swift app entry in the binary — force_load of lighthousevisionswift did not take"
 info "    Swift @main entry present ($SWIFT_ENTRY symbols)"

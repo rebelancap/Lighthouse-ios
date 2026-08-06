@@ -17,7 +17,7 @@ Split the frame:
 VERIFIED FOR THIS FORK, not assumed (the playbook asks for exactly this):
 `Fast3dGui::CalculateGameViewport` derives the engine's render canvas from the
 `ImGui::Begin("Main Game", ...)` window's content size here too
-(Fast3dGui.cpp:306/314/370, Gui.cpp:159/222). So the flagship's rule holds
+(Fast3dGui.cpp:306/314/370, Gui.cpp:159/222). So the Ship of Harkinian port rule holds
 without change: the 3D path must NEVER `Begin("Main Game")`. Touching it with
 SetNextWindowPos/Size undocks it and leaves it floating at the 3D canvas size,
 and back in 2D the engine then renders 1920x1080 into a smaller drawable — a

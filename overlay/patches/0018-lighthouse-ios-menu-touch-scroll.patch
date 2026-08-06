@@ -50,7 +50,7 @@ makes a clean exit look like a fault, exactly the signal we need to stay
 trustworthy. Since settings are flushed on the line above and the OS reclaims
 everything, there is nothing worth unwinding: `_exit` skips the destructors and
 the entire class of teardown race with them (a `Context::~Context` re-entry was
-observed on the same path). The flagship uses `exit(0)` and is likely to have
+observed on the same path). the Ship of Harkinian port uses `exit(0)` and is likely to have
 the same race — worth reporting back.
 
 ## Verification status (2026-07-31)
@@ -77,7 +77,7 @@ What is NOT yet verified: `dy` and `fx` stay **0.0**, i.e. the shell's router
 never called `SohIos_QueueMenuScroll` for an **idb-synthesised** swipe, even
 though idb's horizontal drags DO reach the same router (a slider moved). Since
 taps and drags both work, this looks like a limitation of synthetic touch
-delivery rather than a defect in either half — and the charter's own trap list
+delivery rather than a defect in either half — and the spec's own trap list
 warns that real-finger flows need real-touch tests. Resolve it with a finger on
 the device at the device gate.
 

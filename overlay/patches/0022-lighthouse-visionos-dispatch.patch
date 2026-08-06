@@ -25,8 +25,8 @@ CMAKE_XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET.
 
 No-op for iOS/macOS builds: the condition is never true there.
 
-Divergence from the flagship's 0022 (recorded rather than silently
-dropped): the flagship also language-scopes a top-level
+Divergence from the Ship of Harkinian port 0022 (recorded rather than silently
+dropped): the Ship of Harkinian port also language-scopes a top-level
 -fno-fast-math/-ffp-contract genex so the Xcode generator does not feed
 those C driver flags to swiftc. Lighthouse's root CMakeLists has NO such
 global add_compile_options — the only ones are inside the

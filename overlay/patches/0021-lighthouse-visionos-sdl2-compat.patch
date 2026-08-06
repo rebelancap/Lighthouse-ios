@@ -28,15 +28,15 @@ errors). This patch:
    phase every chunk, producing a measured -30.5 dBc noise floor against
    -71.4 dBc unchunked, ~30 times a second. Skipping the renegotiation leaves
    Apple's converter to do the work, which is structurally what the macOS
-   build does — and the macOS oracle is clean.
+   build does — and the macOS build is clean.
 
-The visionOS asset is taken VERBATIM from the flagship (Shipwright-ios) —
+The visionOS asset is taken VERBATIM from the Ship of Harkinian port (Shipwright-ios) —
 verified first that both ports' LUS forks pin the identical SDL tag
 (release-2.32.10) and carry a byte-identical SDL2 FetchContent block, so
 there is nothing port-specific in it. Copying rather than re-deriving is
 the point: the playbook's whole claim is that a sixth port pays only for
 its own divergences. The audio asset is genuinely ours and is kept in a
-SEPARATE file so the flagship one stays byte-identical and diffable.
+SEPARATE file so the Ship of Harkinian port one stays byte-identical and diffable.
 
 WHY BOTH LIVE IN THIS PATCH rather than a new 0045: the SDL2 FetchContent
 block below is a single hunk, and a second patch inserting a PATCH_COMMAND
@@ -46,7 +46,7 @@ already (0038/0041, then 0042/0013); not paying it a third time.
 
 --- /dev/null
 +++ b/libultraship/cmake/dependencies/patches/sdl2-visionos-compat.patch
-@@ -0,0 +1,621 @@
+@@ -0,0 +1,680 @@
 +diff --git a/src/misc/ios/SDL_sysurl.m b/src/misc/ios/SDL_sysurl.m
 +index 08722ba9e..228ea8c0a 100644
 +--- a/src/misc/ios/SDL_sysurl.m
@@ -497,8 +497,42 @@ already (0038/0041, then 0042/0013); not paying it a third time.
 + 
 + void UIKit_ForceUpdateHomeIndicator(void)
 + {
++diff --git a/src/video/uikit/SDL_uikitview.m b/src/video/uikit/SDL_uikitview.m
++index 676fedbda..38336298a 100644
++--- a/src/video/uikit/SDL_uikitview.m
+++++ b/src/video/uikit/SDL_uikitview.m
++@@ -374,7 +374,19 @@ - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
++ #if TARGET_OS_TV || defined(__IPHONE_9_1)
++ - (SDL_Scancode)scancodeFromPress:(UIPress*)press
++ {
++-#ifdef __IPHONE_13_4
+++    /* SOH_IOS: on iOS/iPadOS this whole routine is a keyboard-event forgery
+++       machine. UIKit synthesizes UIPress events from a connected game
+++       controller and SDL turns them into keystrokes -- CONFIRMED on device
+++       by a user rebinding with a pad: A registered as keyboard Return
+++       (UIPressTypeSelect), X as Pause (UIPressTypePlayPause), the d-pad as
+++       arrows, and B as Escape (UIPressTypeMenu), which toggled the SoH menu
+++       on every press through a path no in-game rebinding could reach.
+++       Refusing it costs nothing on iOS: pressesBegan: only runs when
+++       SDL_HasGCKeyboard() is false, i.e. only when NO keyboard is attached,
+++       and real keyboards on iOS 14+ deliver through GCKeyboard
+++       (SDL_InitGCKeyboard) instead. tvOS still needs it: that is where the
+++       Apple TV remote's presses genuinely come from. */
+++#if defined(__IPHONE_13_4) && TARGET_OS_TV
++     if ([press respondsToSelector:@selector((key))]) {
++         if (press.key != nil) {
++             return (SDL_Scancode)press.key.keyCode;
++@@ -382,7 +394,7 @@ - (SDL_Scancode)scancodeFromPress:(UIPress*)press
++     }
++ #endif
++ 
++-#ifndef SDL_JOYSTICK_DISABLED
+++#if !defined(SDL_JOYSTICK_DISABLED) && TARGET_OS_TV
++     /* Presses from Apple TV remote */
++     if (!SDL_AppleTVRemoteOpenedAsJoystick) {
++         switch (press.type) {
 +diff --git a/src/video/uikit/SDL_uikitviewcontroller.m b/src/video/uikit/SDL_uikitviewcontroller.m
-+index dee4b1972..ff712aae8 100644
++index dee4b1972..6fbdffe16 100644
 +--- a/src/video/uikit/SDL_uikitviewcontroller.m
 ++++ b/src/video/uikit/SDL_uikitviewcontroller.m
 +@@ -181,7 +181,14 @@ - (void)startAnimation
@@ -517,7 +551,32 @@ already (0038/0041, then 0042/0013); not paying it a third time.
 +     data = (__bridge SDL_WindowData *) window->driverdata;
 + 
 +     if ([displayLink respondsToSelector:@selector(preferredFramesPerSecond)]
-+@@ -531,7 +538,11 @@ - (void)updateKeyboard
++@@ -334,6 +341,16 @@ - (void)initKeyboard
++ 
++ - (NSArray *)keyCommands
++ {
+++#if !TARGET_OS_TV
+++    /* SOH_IOS: UIKeyCommand is the second forgery path, and unlike
+++       pressesBegan: it is not gated on the absence of a keyboard. iPadOS
+++       routes a game controller's "cancel" button (B) into UIKeyInputEscape,
+++       which SDL turned into a keyboard Escape. It also meant that with a
+++       real keyboard attached one Escape arrived TWICE (here and via
+++       GCKeyboard) and cancelled itself out. Real keyboard input on iOS 14+
+++       comes from GCKeyboard, so registering nothing here loses nothing. */
+++    return @[];
+++#else
++     NSMutableArray *commands = [[NSMutableArray alloc] init];
++     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputUpArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];
++     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputDownArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];
++@@ -341,6 +358,7 @@ - (NSArray *)keyCommands
++     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputRightArrow modifierFlags:kNilOptions action:@selector(handleCommand:)]];
++     [commands addObject:[UIKeyCommand keyCommandWithInput:UIKeyInputEscape modifierFlags:kNilOptions action:@selector(handleCommand:)]];
++     return [NSArray arrayWithArray:commands];
+++#endif
++ }
++ 
++ - (void)handleCommand:(UIKeyCommand *)keyCommand
++@@ -531,7 +549,11 @@ - (void)updateKeyboard
 + 
 +     CGAffineTransform t = self.view.transform;
 +     CGPoint offset = CGPointMake(0.0, 0.0);
@@ -705,7 +764,7 @@ already (0038/0041, then 0042/0013); not paying it a third time.
 ++     * SDL_AudioStream is built and the AudioQueue's ASBD carries 21998 --
 ++     * Apple's stateful converter then does the rate conversion, which is
 ++     * structurally what the macOS build does (macOS does not use SDL for
-++     * audio at all) and what the clean macOS oracle proves works.
+++     * audio at all) and what the clean macOS build proves works.
 ++     *
 ++     * The session is still activated above; only the rate renegotiation goes.
 ++     */

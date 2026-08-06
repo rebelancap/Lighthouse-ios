@@ -1,8 +1,8 @@
 Overlay patch 0008: frame/tick cadence probe (wall + eng_ms + gpu_ms + sim_tps
 + thermal), and the real `SohIos_HudStats` for the shell's perf HUD.
 
-Charter 0.3 requires this from day one rather than retrofitted, and requires the
-sim-rate metric named honestly. Adapted from the flagship's 0008, with the
+spec 0.3 requires this from day one rather than retrofitted, and requires the
+sim-rate metric named honestly. Adapted from the Ship of Harkinian port 0008, with the
 BK-specific parts corrected:
 
 * **`sim_tps` is measured against 30, not 60.** Banjo-Kazooie's logic rate is
@@ -39,7 +39,7 @@ Dependencies, all already in the overlay and asserted present in this fork:
 
 Externs are FILE-scope `extern "C"` on purpose — block-scope linkage specs do
 not compile in C++, and block-scope externs namespace-mangle. Both cost the
-flagship a debugging session.
+reference a debugging session.
 
 Match-count asserted against the pristine vendor state.
 

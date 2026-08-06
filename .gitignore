@@ -23,8 +23,8 @@ DerivedData/
 *.prestamp
 oracle/shiphome/
 
-# Captured artifacts — keep the dir, ignore the heavy contents (flagship
-# convention). docs/screenshots/ is the exception: those ARE published.
+# Captured artifacts — keep the dir, ignore the heavy contents.
+# docs/screenshots/ is the exception: those ARE published.
 artifacts/**/*.png
 artifacts/**/*.jpg
 artifacts/**/*.mov
