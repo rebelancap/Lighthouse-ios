@@ -1,0 +1,78 @@
+Overlay patch 0053: pin Internal Resolution at 100% and grey it out on
+iOS/visionOS.
+
+`CVAR_INTERNAL_RESOLUTION` lands in `Interpreter::mCurDimensions.internal_mul`,
+which is read in exactly one place: `Fast3dGui::CalculateGameViewport`, where it
+scales `mCurDimensions` from the "Main Game" ImGui window's content size.
+
+On BOTH of this port's present paths that scaling is then thrown away:
+
+* **iOS / visionOS 2D.** `CalculateGameViewport` does run, but overlay 0036's
+  SSAA block in `Interpreter::StartFrame` immediately recomputes the same
+  fields as `sohF = (nativePx / mCurDimensions.width) * ssaa`, then multiplies
+  `mCurDimensions` by `sohF`. Write it out and `mCurDimensions.width` cancels:
+  the result is `nativePx * ssaa` for width, and `height * nativePx / width *
+  ssaa` for height -- both independent of `internal_mul`, which 0036 divides
+  straight back out. Uniform factor, so the aspect is unaffected too.
+* **visionOS stereo 3D.** Overlay 0034's 3D path never calls
+  `Begin("Main Game")` and skips `CalculateGameViewport` entirely; the per-eye
+  override later in `StartFrame` wins regardless.
+
+So the slider genuinely cannot move a pixel here, on either platform. The real
+control is the `Supersampling` slider in Settings > iOS on iPhone (overlay
+0036), and `Render Scale` on Vision Pro, where oversampling is automatic
+(overlay 0017's visionOS branch).
+
+Left alone it is worse than useless: it looks like
+the resolution control, and a user who drags it sees no change and concludes
+the port ignores its own graphics settings. Worse, a value persisted from a
+desktop config would silently ride along in the CVar with nothing honouring it.
+
+Pin the CVar to 1.0 and disable the widget with a tooltip that points at the
+control that DOES work. This matches the sibling ports: SpaghettiKart's 0047
+(same grey-out) and Shipwright's 0024 / 2ship's 0040 (truth-in-labelling on the
+same inert slider).
+
+Mechanics: `Menu::MenuDrawItem` calls `widget.ResetDisables()` and THEN
+`widget.preFunc(widget)`, so assigning `options->disabled` /
+`options->disabledTooltip` inside PreFunc sticks -- no `disabledMap` entry is
+needed. Returning early also skips the `!activeDisables.empty()` branch below,
+which would otherwise overwrite `disabledTooltip` with the generic
+"This setting is disabled because:" text. `disabledTooltip` is a `const char*`
+held past the call, so it must be a string literal (static lifetime), not a
+temporary.
+
+ASCII ONLY in the tooltip: the menu font atlas has no em-dash or bullet glyph
+and renders them as '?' (recorded in 0017's visionOS branch).
+
+`__IOS__`-guarded, so desktop and the macOS oracle keep the working slider.
+
+Match-count asserted against the pristine vendor state.
+
+--- a/src/port/UI/LighthouseMenuSettings.cpp
++++ b/src/port/UI/LighthouseMenuSettings.cpp
+@@ -346,6 +346,24 @@
+                 CVarGetFloat(CVAR_INTERNAL_RESOLUTION, 1));
+         })
+         .PreFunc([](WidgetInfo& info) {
++#ifdef __IOS__
++            // LIGHTHOUSE_IOS (overlay 0053): inert on this platform. The
++            // multiplier only drives the Fast3d ImGui game-window upscale,
++            // which the iOS/visionOS present path never uses -- the game
++            // renders at the native drawable size and supersampling is its
++            // own control. Pin at 100% and grey it out rather than leave a
++            // slider that visibly does nothing.
++            if (CVarGetFloat(CVAR_INTERNAL_RESOLUTION, 1.0f) != 1.0f) {
++                CVarSetFloat(CVAR_INTERNAL_RESOLUTION, 1.0f);
++                Ship::Context::GetRawInstance()->GetWindow()->SetResolutionMultiplier(1.0f);
++            }
++            info.options->disabled = true;
++            info.options->disabledTooltip =
++                "Automatic on this platform - the game already renders at native "
++                "resolution, so this multiplier does nothing. iPhone: use "
++                "Supersampling in Settings > iOS. Vision Pro: use Render Scale.";
++            return;
++#endif
+             if (mLighthouseMenu->disabledMap.at(DISABLE_FOR_ADVANCED_RESOLUTION_ON).active &&
+                 mLighthouseMenu->disabledMap.at(DISABLE_FOR_VERTICAL_RES_TOGGLE_ON).active) {
+                 info.activeDisables.push_back(DISABLE_FOR_ADVANCED_RESOLUTION_ON);

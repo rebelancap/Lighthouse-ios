@@ -710,7 +710,7 @@ static BOOL SohIos_DocumentsHasExt(NSArray<NSString*>* exts) {
 
 // Native first-run flow: if there's no ROM and no extracted archive yet,
 // offer a document picker (Files/iCloud) and copy the chosen ROM into
-// Documents with sane protection/permissions . The in-engine
+// Documents with sane protection/permissions (charter 0.5). The in-engine
 // extractor popups then find it and do the rest.
 @interface SohIosOnboarding : NSObject <UIDocumentPickerDelegate>
 @property(nonatomic, strong) UIWindow* window;
@@ -768,7 +768,7 @@ static SohIosOnboarding* gOnboarding = nil;
     [NSFileManager.defaultManager removeItemAtPath:dst error:nil];
     BOOL ok = [NSFileManager.defaultManager moveItemAtPath:src.path toPath:dst error:&err];
     if (ok) {
-        // user-imported data gets NSFileProtectionNone + sane modes.
+        // Charter 0.5: user-imported data gets NSFileProtectionNone + sane modes.
         [NSFileManager.defaultManager setAttributes:@{
             NSFileProtectionKey : NSFileProtectionNone,
             NSFilePosixPermissions : @0644
@@ -820,7 +820,7 @@ void SohIos_SetAudioAnchorStatus(int s) {
 #if SOH_REMOTE_CONSOLE
 
 // LIGHTHOUSE_CONSOLE=1 → listen on TCP 8770 and accept newline-delimited commands.
-// Converts "needs hands" into "scriptable" for remote testing .
+// Converts "needs hands" into "scriptable" for remote testing (charter tool).
 // Protocol (one command per line, replies "ok"/"err …"):
 //   ping                 liveness
 //   btn NAME [ms]        press virtual pad button (A B START L R) for ms (default 200)
@@ -1219,7 +1219,7 @@ static void SohIos_StartConsoleBridge(BOOL force) {
 }
 #endif
 
-#pragma mark - Deep links (lighthouse:// URL scheme)
+#pragma mark - Deep links (lighthouse:// URL scheme, charter Phase 1)
 
 static void SohIos_HandleDeepLink(NSString* url) {
     NSLog(@"[SohIosShell] deep link: %@", url);
@@ -2188,7 +2188,7 @@ void SohIos_RestoreWindowTo(CGSize target) {
 
 // LUS applies Port1.LeftStick.DeadzonePercentage (default 20) to all stick
 // input — right for physical sticks, wrong for touch (the touch layer has
-// zero mechanical noise; spec wants zero effective deadzone). Precompensate:
+// zero mechanical noise; charter wants zero effective deadzone). Precompensate:
 // any deflection starts past the deadzone, and the remaining travel maps
 // linearly, so walk/run gradation is preserved. Physical pads are untouched.
 static const CGFloat kLusDeadzone = 0.20;
@@ -3336,7 +3336,7 @@ void SohIos_OnWindowCreated(struct SDL_Window* sdlWindow) {
     dispatch_async(dispatch_get_main_queue(), ^{
         SohIos_InstallSceneDelegate(); // lighthouse:// URL delivery (scene-routed)
         SohIos_EnsureLandscape(window, 0);
-        // Native ROM picker if there's nothing to play yet .
+        // Native ROM picker if there's nothing to play yet (charter 0.5).
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(),
                        ^{ [SohIosOnboarding maybePresentIn:window]; });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(),

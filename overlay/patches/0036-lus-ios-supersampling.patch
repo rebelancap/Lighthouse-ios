@@ -15,7 +15,7 @@ deactivate to the safe full-fb path). Clamped to the backend max
 texture size. The visionOS 3D eye path is unaffected (the eye override
 later in StartFrame wins). Shell provides SohIos_SsaaFactor
 (gSohIos.Supersample, 1.0-2.0, SoH default 1.0 — heavy port) and
-SohIos_DrawablePixelWidth. __IOS__-only; macOS build pristine.
+SohIos_DrawablePixelWidth. __IOS__-only; macOS oracle pristine.
 
 --- a/libultraship/src/fast/interpreter.cpp
 +++ b/libultraship/src/fast/interpreter.cpp

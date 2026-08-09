@@ -28,7 +28,7 @@ Three problems for this port:
    reports "Configuring iphoneos build for platform: OS64" and the whole tree —
    libzip, SDL2, everything — compiles against the iPhoneOS SDK while the
    caller believes they are building for the simulator. This is the same class
-   of bug as reference 0009 (which fixed the identical hardcode inside LUS's
+   of bug as flagship 0009 (which fixed the identical hardcode inside LUS's
    ios-toolchain-populate.cmake); it just also exists one level up here.
 
 2. `CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "YOUR_TEAM_ID"` is a template
@@ -46,7 +46,7 @@ default", which is inert for an unmodified upstream build and correct for
 ours.
 
 4. THE FOURTH visionOS DISPATCH FLIP (added 2026-08-01, Phase 01).
-   Overlay 0022 — ported from the Ship of Harkinian port — flips CMAKE_SYSTEM_NAME back to
+   Overlay 0022 — ported from the flagship — flips CMAKE_SYSTEM_NAME back to
    "iOS" at each place the leetal toolchain re-asserts "visionOS": the
    top-level project(), libultraship's project(), and LUS's
    ios-toolchain-populate include. In SoH those three are the complete set,

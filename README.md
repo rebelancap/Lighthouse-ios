@@ -51,23 +51,33 @@ Then **add your Banjo-Kazooie ROM** — the app walks you through it on first la
 
 ## Texture packs
 
-The port supports Harbour Masters' `.o2r` mods, and the pack to watch is
-**[BK Reloaded](https://evilgames.eu/texture-packs/bk-reloaded.htm)** — an HD/4K texture
-pack for Banjo-Kazooie.
+The port supports Harbour Masters' `.o2r` mods, and the one to get is
+**[BK Reloaded](https://evilgames.eu/texture-packs/bk-reloaded.htm)** by GhostlyDark — the
+same author as OoT Reloaded — a UHD texture pack in two flavours.
 
-- **Downloads:** **Coming soon** —
+| Device | Recommended | Why |
+| --- | --- | --- |
+| **iPhone** | **HD** | Already out-resolves the phone's panel, and leaves the thermal headroom that keeps frame rates locked. On a phone-sized screen the 4K pack costs memory and heat for detail you cannot see. |
+| **Apple Vision Pro** | **4K** | The headset renders at a far higher effective resolution and has the GPU headroom to spend. This is where the larger pack earns its size. |
+
+- **Pack page & downloads:**
   [evilgames.eu/texture-packs/bk-reloaded.htm](https://evilgames.eu/texture-packs/bk-reloaded.htm)
+- **Grab the `Lighthouse O2R` download** — `lh-o2r-hd` for iPhone, `lh-o2r-4k` for Vision
+  Pro.
 
-**Installing (once a pack is available):** extract the download on a computer, then copy
-the resulting `.o2r` into *On My iPhone / Apple Vision Pro → Lighthouse → **mods*** in the
-Files app and relaunch. Then turn mods on in the game's menu: **Mod Menu → Enable Mods**
-(it's off by default, so this step is required). Turn it back off to compare against
-vanilla.
+> **The pack is early — v0.2.1 is "UI only".** It currently replaces interface art, not
+> the world. That is partly deliberate pacing by the author and partly an upstream limit:
+> Banjo-Kazooie's model textures are bundled into the model data rather than addressed
+> individually, so alternate-asset replacement cannot reach most in-world surfaces yet.
+> Neither is an iOS limitation, and both improve as upstream and the pack progress —
+> install it now and it gets better under you, but do not expect the transformation the
+> equivalent packs deliver in the other ports.
 
-> **Note:** Banjo-Kazooie's model textures are currently bundled into the model data
-> rather than addressed individually, so alternate-asset replacement does not reach most
-> in-world surfaces yet — an upstream limitation, not an iOS one. Expect a pack to change
-> less than the equivalent packs do in the other ports until that changes upstream.
+**Installing:** extract the `.7z` on a computer, then copy the resulting `.o2r` into
+*On My iPhone / Apple Vision Pro → Lighthouse → **mods*** in the Files app and relaunch.
+The pack applies once **Enable Mods** is on (*Settings → Mod Menu → **Enable Mods*** in
+the game's menu) — that's **on by default** on this build, so normally there is nothing to
+do. Turn it off to compare against vanilla.
 
 ## Features
 
@@ -165,9 +175,11 @@ is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.s
   and contributors — the port this is built on
 - [libultraship](https://github.com/HarbourMasters/libultraship) (MIT) and the Harbour
   Masters asset pipeline — the platform layer
-- [BK Reloaded](https://evilgames.eu/texture-packs/bk-reloaded.htm) texture pack
+- [BK Reloaded](https://evilgames.eu/texture-packs/bk-reloaded.htm) texture pack by
+  **GhostlyDark**
 - BANJO-KAZOOIE © **Nintendo** / **Rare**. This project is not affiliated with or endorsed
   by Nintendo or Rare, and ships no Nintendo or Rare content.
 
-<!-- Licensing follows upstream: Lighthouse ships no root LICENSE file, so neither
-     does this repo. libultraship is MIT and carries its own. -->
+<!-- This repo's own code (the app shell, the overlay, the scripts) is MIT — see
+     LICENSE. Upstream Lighthouse ships no root LICENSE file and is unaffected by ours;
+     libultraship is MIT and carries its own. -->

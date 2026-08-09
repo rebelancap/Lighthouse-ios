@@ -5,7 +5,7 @@ BK's sky is drawn CENTRED ON THE CAMERA — `sky_draw` literally does
 ...)` for each of the three sky layers. So the per-eye camera shift CANCELS for
 it: the sky lands at zero disparity, i.e. exactly on the panel plane, while the
 terrain recedes behind it. Occlusion says "farthest", stereo says "nearest", and
-the brain refuses. the Ship of Harkinian port hit this on device and the sm64coopdx port hit
+the brain refuses. The flagship hit this on device and the sm64coopdx port hit
 it before that; both describe it the same way, as disorienting clouds.
 
 The fix is infinity disparity for skybox draws — skew only, no eye translation —

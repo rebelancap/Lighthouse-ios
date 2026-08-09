@@ -48,7 +48,7 @@ Correctness notes:
     `mOpenPopup = true`.
 
 Behaviour is unchanged whenever the popup is where it is supposed to be, which
-is every case that occurs today — including on the macOS build.
+is every case that occurs today — including on the macOS oracle.
 
 --- a/libultraship/src/ship/window/gui/FileBrowserWindow.cpp
 +++ b/libultraship/src/ship/window/gui/FileBrowserWindow.cpp

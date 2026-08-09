@@ -5,9 +5,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR="$ROOT/vendor/Lighthouse"
 
 LH_REPO="https://github.com/HarbourMasters/Lighthouse.git"
-LH_PIN="e598cfcc21e21b6ff5cdf533098f22539246c770"
+LH_PIN="d3c35e6c2bbaa4d07fe2858d54e2943cb9944ab8"
 LUS_PIN="2917d0f4fe62c579174561dcd34f327c9410bb72"
-TORCH_PIN="f89e944671b406615246685a5a60b65e48ab01f8"
+TORCH_PIN="a1ca27149d60b636168ded60ebd6e04b906c3008"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }

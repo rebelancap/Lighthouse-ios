@@ -8,7 +8,7 @@ gSohIos.AsyncShaders, default ON; live kill switch via bridge `cvar`), and
 skip draws whose pipeline isn't ready yet (geometry pops in a few frames
 later). Per-window lib/pso compile ledgers feed the 0008 perf line
 (lib_ms/lib_n/pso_ms/pso_n) — attribution and the fix's own before/after.
-__IOS__-only; the macOS build keeps the pristine synchronous path.
+__IOS__-only; the macOS oracle keeps the pristine synchronous path.
 
 --- a/libultraship/src/fast/backends/gfx_metal.cpp
 +++ b/libultraship/src/fast/backends/gfx_metal.cpp

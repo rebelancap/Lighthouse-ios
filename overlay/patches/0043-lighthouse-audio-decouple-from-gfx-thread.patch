@@ -23,7 +23,7 @@ production is COUPLED to the game loop's per-tick notify"), in Banjo's shape.
 Sustained music makes it audible where percussive SFX would mask it, which
 matches the report exactly.
 
-MEASURED FIRST, per the spec ("measure YOUR fork's DesiredBuffered before
+MEASURED FIRST, per the charter ("measure YOUR fork's DesiredBuffered before
 trusting any formula"). This fork configures, in Engine.cpp:
 
     InitAudio({ .SampleRate = 22000, .SampleLength = 736, .DesiredBuffered = 2208 })
@@ -64,7 +64,7 @@ WHAT THIS PATCH DOES, in two separable halves:
 `osSendMesg` is a real mutex/condvar queue in this port (src/port/OS/OS_Mesg.cpp),
 so posting from another thread is safe.
 
-All `__IOS__`-gated: the macOS build keeps pristine upstream timing, which is
+All `__IOS__`-gated: the macOS oracle keeps pristine upstream timing, which is
 what makes it usable as the comparison.
 
 STATUS (device A/B, M-027): the pump changes NOTHING measurable on real

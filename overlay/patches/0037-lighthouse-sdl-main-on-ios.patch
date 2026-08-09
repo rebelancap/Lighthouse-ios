@@ -1,7 +1,7 @@
 Overlay patch 0037: keep SDL_main named SDL_main on iOS.
 
-NUMBERING: 0001-0036 mirror the Ship of Harkinian port patch numbers (same intent, same
-slot). 0037+ are Lighthouse-only patches with no reference equivalent, so a
+NUMBERING: 0001-0036 mirror the flagship's patch numbers (same intent, same
+slot). 0037+ are Lighthouse-only patches with no flagship equivalent, so a
 reader can tell at a glance which are inherited and which are ours.
 
 src/port/Game.cpp does:
@@ -20,7 +20,7 @@ UIKit is up. With the rename in place the game defines its own main(), which
 collides with SDL2main's at link — and if it won the link, UIKit would never be
 initialised at all.
 
-This is the mirror image of the Ship of Harkinian port approach: SoH's entry is a plain
+This is the mirror image of the flagship's approach: SoH's entry is a plain
 main() and its patch adds `main=SDL_main`; Lighthouse already renames toward
 main, so we suppress the rename instead. Same destination, opposite direction —
 worth stating because copying SoH's `set_source_files_properties(... main=SDL_main)`

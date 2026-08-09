@@ -55,7 +55,7 @@ Match-count asserted against the pristine vendor state.
 +// LIGHTHOUSE_IOS (overlay 0013): game-state exports for the iOS app shell.
 +// File-scope extern "C" on purpose — a block-scope linkage spec does not
 +// compile in C++, and block-scope externs namespace-mangle (both cost the
-+// reference a debugging session). The shell never reads game memory; it asks
++// flagship a debugging session). The shell never reads game memory; it asks
 +// these questions and gets a plain int back.
 +// ---------------------------------------------------------------------------
 +extern "C" {

@@ -4,20 +4,20 @@ NUMBERING: 0037+ are Lighthouse-only.
 
 === 1. MENU SCALE (correcting SHELL-DIVERGENCES B8) ===
 
-B8 recorded that the Ship of Harkinian port "Menu Scale" slider was deliberately NOT
-shipped here, because the Ship of Harkinian port applies it through
+B8 recorded that the flagship's "Menu Scale" slider was deliberately NOT
+shipped here, because the flagship applies it through
 `OTRGlobals::ScaleImGui()` "which has no analogue here". That was wrong, and
 the user caught it: `GameEngine::ScaleImGui()` (src/port/Engine.cpp:1056) is
 structurally identical — same preset-index CVar, same
 `previousImGuiScale` ratio tracking, same live `ScaleAllSizes` +
-`FontGlobalScale` application. I searched for the Ship of Harkinian port SYMBOL instead of
+`FontGlobalScale` application. I searched for the flagship's SYMBOL instead of
 its MECHANISM and concluded the mechanism was absent.
 
-So this ports reference overlay 0015 exactly: multiply `gSohIos.MenuScale`
+So this ports flagship overlay 0015 exactly: multiply `gSohIos.MenuScale`
 (default 0.85, the family-wide value) into the target scale, and compare the
 COMBINED float rather than the preset index — otherwise the early-out on
 `imGuiScaleIndex == previousImGuiScaleIndex` swallows every slider move,
-which is precisely the "menu scale does nothing" bug the Ship of Harkinian port hit on
+which is precisely the "menu scale does nothing" bug the flagship hit on
 device.
 
 
@@ -31,7 +31,7 @@ device.
 +    // LIGHTHOUSE_IOS (overlay 0045): fold the iOS menu-scale slider into the
 +    // preset. Compare the COMBINED scale, not the preset index -- the index
 +    // early-out below is unchanged by a slider move, so keeping it would make
-+    // the slider silently do nothing (the exact bug the Ship of Harkinian port shipped and
++    // the slider silently do nothing (the exact bug the flagship shipped and
 +    // had to fix on device).
 +    float scale = imguiScaleOptionToValue[imGuiScaleIndex] *
 +                  CVarGetFloat("gSohIos.MenuScale", 0.85f);

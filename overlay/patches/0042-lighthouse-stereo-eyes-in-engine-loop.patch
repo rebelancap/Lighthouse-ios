@@ -1,12 +1,12 @@
 Overlay patch 0042: drive the stereo eye passes from Lighthouse's own loop.
 
-NUMBERING: 0001-0036 mirror the Ship of Harkinian port patch slots; 0037+ are
-Lighthouse-only. This is the Lighthouse-only counterpart to the Ship of Harkinian port
+NUMBERING: 0001-0036 mirror the flagship's patch slots; 0037+ are
+Lighthouse-only. This is the Lighthouse-only counterpart to the flagship's
 0031, and it exists because of a real structural difference between the two
 upstreams.
 
 THE DIVERGENCE. SoH renders through
-`Fast3dWindow::DrawAndRunGraphicsCommands`, so the Ship of Harkinian port whole two-eye
+`Fast3dWindow::DrawAndRunGraphicsCommands`, so the flagship's whole two-eye
 branch lives inside LUS. Lighthouse EXPANDS that function inline in
 `GameEngine::` (src/port/Engine.cpp), with upstream's own comment explaining
 why: it needs to read the backbuffer between `Run()` (frame rendered) and
@@ -14,7 +14,7 @@ why: it needs to read the backbuffer between `Run()` (frame rendered) and
 memory and `gFramebuffers` always held valid pixels after rendering.
 
 `Fast3dWindow::DrawAndRunGraphicsCommands` still EXISTS in this LUS fork -- it
-is simply never called. Patching it, as the Ship of Harkinian port does, compiled cleanly,
+is simply never called. Patching it, as the flagship does, compiled cleanly,
 applied cleanly, and did nothing at all. The only symptom was the bridge's `3d`
 line reading `mode=1 loop=1` (3D active, compositor thread alive, panel showing
 its test pattern) next to `eyeL=0 eyeR=0` (no eye pass had ever run). Worth
@@ -23,7 +23,7 @@ executes.
 
 THE SUB-FRAME MAPPING, which is also ours. Lighthouse renders `frameCount`
 interpolated SUB-FRAMES per 30 Hz logic tick; each sub-frame is one presented
-frame. the Ship of Harkinian port renders both eyes once per host frame, so here both eyes
+frame. The flagship renders both eyes once per host frame, so here both eyes
 render per SUB-FRAME. Cost scales the way the 2D path already does, and the
 existing budget check (`sPassBudgetNs`) still bounds the pass -- it will simply
 fit fewer sub-frames in 3D, which is the correct degradation.

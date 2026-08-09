@@ -28,15 +28,15 @@ errors). This patch:
    phase every chunk, producing a measured -30.5 dBc noise floor against
    -71.4 dBc unchunked, ~30 times a second. Skipping the renegotiation leaves
    Apple's converter to do the work, which is structurally what the macOS
-   build does — and the macOS build is clean.
+   build does — and the macOS oracle is clean.
 
-The visionOS asset is taken VERBATIM from the Ship of Harkinian port (Shipwright-ios) —
+The visionOS asset is taken VERBATIM from the flagship (Shipwright-ios) —
 verified first that both ports' LUS forks pin the identical SDL tag
 (release-2.32.10) and carry a byte-identical SDL2 FetchContent block, so
 there is nothing port-specific in it. Copying rather than re-deriving is
 the point: the playbook's whole claim is that a sixth port pays only for
 its own divergences. The audio asset is genuinely ours and is kept in a
-SEPARATE file so the Ship of Harkinian port one stays byte-identical and diffable.
+SEPARATE file so the flagship one stays byte-identical and diffable.
 
 WHY BOTH LIVE IN THIS PATCH rather than a new 0045: the SDL2 FetchContent
 block below is a single hunk, and a second patch inserting a PATCH_COMMAND
@@ -764,7 +764,7 @@ already (0038/0041, then 0042/0013); not paying it a third time.
 ++     * SDL_AudioStream is built and the AudioQueue's ASBD carries 21998 --
 ++     * Apple's stateful converter then does the rate conversion, which is
 ++     * structurally what the macOS build does (macOS does not use SDL for
-++     * audio at all) and what the clean macOS build proves works.
+++     * audio at all) and what the clean macOS oracle proves works.
 ++     *
 ++     * The session is still activated above; only the rate renegotiation goes.
 ++     */
