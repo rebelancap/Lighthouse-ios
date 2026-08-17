@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
+# bootstrap.sh — reproduce the pinned vendor checkout from nothing.
+#
+# Program rule: upstream stays pristine, pinned by commit. This script is the
+# ONE command that recreates vendor/ on a clean machine. Failures are loud:
+# no `|| true`, and every pin is asserted after checkout.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENDOR="$ROOT/vendor/Lighthouse"
 
+# --- D0 pins (see DECISIONS.md) ---------------------------------------------
 LH_REPO="https://github.com/HarbourMasters/Lighthouse.git"
-LH_PIN="d3c35e6c2bbaa4d07fe2858d54e2943cb9944ab8"
-LUS_PIN="2917d0f4fe62c579174561dcd34f327c9410bb72"
-TORCH_PIN="a1ca27149d60b636168ded60ebd6e04b906c3008"
+# Upstream release 1.1.0 "Hatteras Alfa" (2026-08-16). First LUS movement in
+# three releases (2917d0f -> 62e973ae, 4 commits / 11 files); Torch advanced to
+# 2ab12fe for extraction speed. See D31 for the bump drill.
+LH_PIN="9c39b49574388f1656a53a518257f399b5368062"
+LUS_PIN="62e973aeb4a53ad4d22bb91e2d9373ecdfcd246c"
+TORCH_PIN="2ab12fe9660aec04e02ee89fe81baed304a1a1d6"
 
 die() { printf '\033[31mFATAL:\033[0m %s\n' "$*" >&2; exit 1; }
 info() { printf '\033[36m==>\033[0m %s\n' "$*"; }
@@ -23,6 +32,7 @@ git -C "$VENDOR" fetch --all --tags --quiet
 git -C "$VENDOR" checkout --quiet "$LH_PIN"
 git -C "$VENDOR" submodule update --init --recursive --quiet
 
+# --- assert the pins actually took ------------------------------------------
 assert_pin() {
   local label="$1" dir="$2" want="$3" got
   got="$(git -C "$dir" rev-parse HEAD)"
@@ -33,6 +43,17 @@ assert_pin "Lighthouse"   "$VENDOR"                 "$LH_PIN"
 assert_pin "libultraship" "$VENDOR/libultraship"    "$LUS_PIN"
 assert_pin "Torch"        "$VENDOR/Torch"           "$TORCH_PIN"
 
+# --- assert vendor purity ----------------------------------------------------
+# Untracked build artifacts (baserom.z64, *.o2r, build-cmake/) are expected.
+# Modified TRACKED files are only acceptable if they are EXACTLY the overlay —
+# i.e. every modification is accounted for by a patch in overlay/patches.
+#
+# The naive check ("no modified tracked files") was wrong: it fired in the
+# normal working state, because the overlay legitimately modifies tracked files.
+# A check that fails whenever you are actually working is a check nobody runs.
+# What we care about is that NOTHING was hand-edited, so verify it directly:
+# every patch must reverse cleanly, which is only true if the tree is exactly
+# pristine-plus-overlay.
 DIRTY="$(git -C "$VENDOR" status --porcelain --untracked-files=no)"
 if [ -n "$DIRTY" ]; then
   shopt -s nullglob

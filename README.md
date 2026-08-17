@@ -85,6 +85,8 @@ do. Turn it off to compare against vanilla.
 - The **Lighthouse enhancements menu** — the reason these ports exist: higher frame
   rates, widescreen, and the whole quality-of-life catalogue
 - The **randomizer** and **online co-op (Anchor)**, as shipped upstream
+- **Presets** — save a whole set of enhancement/rando options under a name and
+  reapply it in one tap (Settings → Presets)
 - **ROM-hack support** — extract a Banjo's Backpack hack on the device itself and it
   installs as a mod overlay (custom MIPS code isn't extractable, so hacks that rely on
   it will be missing that behaviour). Needs a **US v1.0** base — see the FAQ
@@ -155,8 +157,8 @@ Requires macOS with Xcode and `cmake` (`brew install cmake`).
 
 ```sh
 scripts/bootstrap.sh          # clone + pin upstream Lighthouse (submodules recursive)
-scripts/build-oracle.sh       # native macOS build — generates the asset archive
-scripts/extract-bk-o2r.sh     # build bk.o2r from your ROM (for the simulator)
+scripts/build-oracle.sh       # native macOS build — the parity reference
+scripts/extract-bk-o2r.sh     # build bk.o2r from your ROM (for the sim/oracle)
 
 scripts/build-sim.sh          # iOS Simulator build
 scripts/run-sim.sh            # install + launch + screenshot
@@ -166,8 +168,8 @@ scripts/build-visionos.sh     # signed Apple Vision Pro build
 ```
 
 Upstream Lighthouse is vendored **unmodified and pinned by commit**; every local change
-is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.sh` (a patch that fails to apply fails the build). The iOS/visionOS app shell lives in `app/ios/`.
-
+is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.sh` (a
+patch that fails to apply fails the build). The iOS/visionOS app shell lives in `app/ios/`.
 
 ## Credits & license
 
@@ -180,6 +182,7 @@ is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.s
 - BANJO-KAZOOIE © **Nintendo** / **Rare**. This project is not affiliated with or endorsed
   by Nintendo or Rare, and ships no Nintendo or Rare content.
 
-<!-- This repo's own code (the app shell, the overlay, the scripts) is MIT — see
-     LICENSE. Upstream Lighthouse ships no root LICENSE file and is unaffected by ours;
-     libultraship is MIT and carries its own. -->
+<!-- This repo's own code (the shell, the overlay generators, the scripts) is MIT —
+     see LICENSE. Upstream Lighthouse ships no root LICENSE file and is unaffected by
+     ours; libultraship is MIT and carries its own. The LICENSE was added in the 1.0.2
+     public snapshot and back-filled into this dev repo afterwards. -->

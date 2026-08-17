@@ -45,10 +45,11 @@ Match-count asserted against the pristine vendor state.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -1382,7 +1382,172 @@
-     return { subframesPerTick, fps, viPerTick };
- }
- } // namespace
+@@ -678,7 +678,172 @@
+ 
+ bool GameEngine::IsInterpolationEnabled() {
+     return (int)GetInterpolationFPS() > EffectiveLogicFps();
++}
 +
 +
 +#ifdef __IOS__
@@ -149,7 +150,7 @@ Match-count asserted against the pristine vendor state.
 +        }
 +        lastFrame = now;
 +    }
- 
++
 +    void OnTick() {
 +        ticks++;
 +        auto now = std::chrono::steady_clock::now();
@@ -212,13 +213,12 @@ Match-count asserted against the pristine vendor state.
 +    if (fps != nullptr) {
 +        *fps = LighthousePerf::gProbe.hudFps;
 +    }
-+}
+ }
 +#endif // __IOS__
-+
+ 
  void GameEngine::ProcessGfxCommands(Gfx* commands) {
      auto wnd = std::dynamic_pointer_cast<Fast::Fast3dWindow>(Ship::Context::GetRawInstance()->GetWindow());
- 
-@@ -1445,7 +1610,18 @@
+@@ -734,7 +899,18 @@
          activeFrames = 1;
      }
  
@@ -235,5 +235,5 @@ Match-count asserted against the pristine vendor state.
      RunCommands(commands, mtx_replacements, activeFrames);
 +#endif
  
-     // Drain any builds the render loop didn't consume (debugger path, early
-     // return) before the next tick's StartRecord resets the trees they read.
+     for (auto& f : sMapBuildFutures) {
+         if (f.valid()) {

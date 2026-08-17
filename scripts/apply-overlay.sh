@@ -1,4 +1,7 @@
 #!/bin/bash
+# Apply the overlay patch series to vendor/Lighthouse. Idempotent and loud:
+# a patch that is neither applied nor cleanly appliable fails the build.
+# Patch paths are relative to vendor/Lighthouse (-p1).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,6 +20,9 @@ fi
 applied=0 skipped=0
 for p in "${series[@]}"; do
     name="$(basename "$p")"
+    # Forward dry-run first. --force on both probes: without it, patch
+    # direction-guesses and exits 0 on the wrong direction (observed: an
+    # unapplied patch passed the -R probe and was silently skipped).
     if patch -p1 --forward --force --fuzz=0 --dry-run -d "$VENDOR" < "$p" > /dev/null 2>&1; then
         patch -p1 --forward --force --fuzz=0 -d "$VENDOR" < "$p" > /dev/null
         echo "overlay: applied $name"
@@ -28,6 +34,9 @@ for p in "${series[@]}"; do
         exit 1
     fi
 done
+# patch(1) leaves .orig/.rej backups behind. They are harmless, but they sit in
+# the vendor tree and shadow real files in greps (a symbol lookup matched a
+# stale .orig once and reported the wrong verdict). Sweep them every run.
 litter=$(find "$VENDOR" \( -name '*.orig' -o -name '*.rej' \) | wc -l | tr -d ' ')
 if [[ "$litter" != "0" ]]; then
     find "$VENDOR" \( -name '*.orig' -o -name '*.rej' \) -delete

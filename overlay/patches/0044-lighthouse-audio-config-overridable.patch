@@ -76,9 +76,9 @@ produced a given recording.
 
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -138,6 +138,23 @@
-     return version.major == gBuildVersionMajor && version.minor == gBuildVersionMinor;
- }
+@@ -117,6 +117,23 @@
+ 
+ // Construction
  
 +#ifdef __IOS__
 +// LIGHTHOUSE_IOS (overlay 0044): the one audio-rate knob, cached so the synth
@@ -100,7 +100,7 @@ produced a given recording.
  GameEngine::GameEngine() {
      this->context = Ship::Context::CreateUninitializedInstance("Lighthouse", "bk", "lighthouse.cfg.json");
  
-@@ -178,7 +195,32 @@
+@@ -155,7 +172,32 @@
  
      lhFast3dWindow = std::make_shared<Fast::Fast3dWindow>(std::vector<std::shared_ptr<Ship::GuiWindow>>({}));
      this->context->InitWindow(lhFast3dWindow);

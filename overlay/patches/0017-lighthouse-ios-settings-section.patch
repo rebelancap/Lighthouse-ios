@@ -48,10 +48,10 @@ Match-count asserted against the pristine vendor state.
 
 --- a/src/port/UI/LighthouseMenuSettings.cpp
 +++ b/src/port/UI/LighthouseMenuSettings.cpp
-@@ -75,6 +75,40 @@
- };
- 
- static int32_t sAppliedControlScheme = -1;
+@@ -113,6 +113,40 @@
+         pressed = false;
+     }
+ }
 +
 +
 +#ifdef __IOS__
@@ -89,7 +89,7 @@ Match-count asserted against the pristine vendor state.
  
  void LighthouseMenu::AddMenuSettings() {
      // Add Settings Menu
-@@ -283,7 +317,167 @@
+@@ -322,7 +356,167 @@
                       .ComponentAlignment(ComponentAlignments::Right)
                       .LabelPosition(LabelPositions::Far));
      //.Callback([](WidgetInfo& info) { GameEngine::Instance->ScaleImGui(); });

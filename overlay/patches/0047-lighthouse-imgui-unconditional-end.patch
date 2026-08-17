@@ -70,7 +70,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
 
 --- a/src/port/Rando/CheckTracker/CheckTracker.cpp
 +++ b/src/port/Rando/CheckTracker/CheckTracker.cpp
-@@ -151,8 +151,9 @@
+@@ -155,8 +155,9 @@
                                   ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
                  ImGui::SetWindowFontScale(collectedChecksScale);
                  ImGui::Text("Checks: %s", totalCheckCount.c_str());
@@ -81,7 +81,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
              ImGui::PopStyleColor(3);
          } else {
              ImGui::Text("Checks: %s", totalCheckCount.c_str());
-@@ -291,8 +292,9 @@
+@@ -307,8 +308,9 @@
              if (ImGui::BeginChild("CheckTrackerChild")) {
                  DrawCheckTrackerList();
                  expandState = expandToggle;
@@ -92,7 +92,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
          }
      }
  
-@@ -328,8 +330,9 @@
+@@ -344,8 +346,9 @@
          if (!checkTrackerPopoutState) {
              if (ImGui::BeginChild("EmbeddedCheckTrackerChild")) {
                  DrawCheckTrackerList();
@@ -103,7 +103,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
          } else {
              ImGui::TextColored(UIWidgets::ColorValues.at(WIDGET_COLOR), "Tracker popped out");
          }
-@@ -432,8 +435,9 @@
+@@ -448,8 +451,9 @@
                  ImGui::PopID();
                  checkColorIndex++;
              }
@@ -162,7 +162,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void Metrics_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/GameplayTools.cpp
 +++ b/src/port/UI/DeveloperTools/GameplayTools.cpp
-@@ -417,8 +417,9 @@
+@@ -421,8 +421,9 @@
              }
              ImGui::EndTable();
          }
@@ -173,7 +173,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawGrantUnlocks() {
-@@ -494,8 +495,9 @@
+@@ -498,8 +499,9 @@
              }
              ImGui::EndTable();
          }
@@ -187,7 +187,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  void GameplayTools_DrawTabBar() {
 --- a/src/port/UI/DeveloperTools/SaveEditor.cpp
 +++ b/src/port/UI/DeveloperTools/SaveEditor.cpp
-@@ -180,8 +180,9 @@
+@@ -195,8 +195,9 @@
              ImGui::EndTable();
          }
  
@@ -198,7 +198,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawGeneralTab() {
-@@ -281,8 +282,9 @@
+@@ -296,8 +297,9 @@
              ImGui::PopID();
          }
  
@@ -210,7 +210,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void SaveEditor_DrawProgressTab() {
-@@ -350,8 +352,9 @@
+@@ -417,8 +419,9 @@
          }
          ImGui::PopStyleVar(1);
  
@@ -221,7 +221,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoFlagEditor() {
-@@ -369,8 +372,9 @@
+@@ -436,8 +439,9 @@
              }
              ImGui::PopID();
          }
@@ -232,7 +232,7 @@ stack now unwinds correctly instead of corrupting the whole menu.
  }
  
  void DrawRandoCheckEditor() {
-@@ -466,8 +470,9 @@
+@@ -533,8 +537,9 @@
                  }
                  ImGui::EndTable();
              }

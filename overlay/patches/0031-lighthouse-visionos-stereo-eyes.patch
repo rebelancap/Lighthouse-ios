@@ -421,7 +421,7 @@ never leaves 0; the macOS oracle compiles none of it.
      std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff> mGetPixelDepthCached; // get_pixel_depth_cached;
 --- a/libultraship/src/fast/interpreter.cpp
 +++ b/libultraship/src/fast/interpreter.cpp
-@@ -1466,7 +1466,151 @@
+@@ -1462,7 +1462,151 @@
      res[0] = a[0] * b[0][0] + a[1] * b[0][1] + a[2] * b[0][2];
      res[1] = a[0] * b[1][0] + a[1] * b[1][1] + a[2] * b[1][2];
      res[2] = a[0] * b[2][0] + a[1] * b[2][1] + a[2] * b[2][2];
@@ -573,7 +573,7 @@ never leaves 0; the macOS oracle compiles none of it.
  
  void Interpreter::MatrixMul(float res[4][4], const float a[4][4], const float b[4][4]) {
      float tmp[4][4];
-@@ -1540,6 +1684,12 @@
+@@ -1536,6 +1680,12 @@
          }
          mRsp->lights_changed = 1;
      }
@@ -586,7 +586,7 @@ never leaves 0; the macOS oracle compiles none of it.
      MatrixMul(mRsp->MP_matrix, mRsp->modelview_matrix_stack[mRsp->modelview_matrix_stack_size - 1], mRsp->P_matrix);
  }
  
-@@ -1548,6 +1698,13 @@
+@@ -1544,6 +1694,13 @@
          if (mRsp->modelview_matrix_stack_size > 0) {
              --mRsp->modelview_matrix_stack_size;
              if (mRsp->modelview_matrix_stack_size > 0) {
@@ -600,7 +600,7 @@ never leaves 0; the macOS oracle compiles none of it.
                  MatrixMul(mRsp->MP_matrix, mRsp->modelview_matrix_stack[mRsp->modelview_matrix_stack_size - 1],
                            mRsp->P_matrix);
              }
-@@ -3343,6 +3500,14 @@
+@@ -3336,6 +3493,14 @@
      const char* filename = (const char*)(cmd)->words.w1;
      uint32_t p = C0(16, 8);
      uint32_t l = C0(0, 16);

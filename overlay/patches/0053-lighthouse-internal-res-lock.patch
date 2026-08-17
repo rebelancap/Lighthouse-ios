@@ -51,7 +51,7 @@ Match-count asserted against the pristine vendor state.
 
 --- a/src/port/UI/LighthouseMenuSettings.cpp
 +++ b/src/port/UI/LighthouseMenuSettings.cpp
-@@ -346,6 +346,24 @@
+@@ -385,6 +385,24 @@
                  CVarGetFloat(CVAR_INTERNAL_RESOLUTION, 1));
          })
          .PreFunc([](WidgetInfo& info) {

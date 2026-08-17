@@ -79,7 +79,7 @@ future finding, delete it rather than leave it as decoration.
 
 --- a/src/port/OS/OS_AI.cpp
 +++ b/src/port/OS/OS_AI.cpp
-@@ -20,6 +20,140 @@
+@@ -21,6 +21,140 @@
  #include <cstring>
  #include <vector>
  
@@ -220,7 +220,7 @@ future finding, delete it rather than leave it as decoration.
  extern "C" u32 osAiGetLength(void) {
      int32_t excess = AudioPlayerBuffered() - AudioPlayerGetDesiredBuffered();
      return excess > 0 ? (u32)excess * 4 : 0;
-@@ -46,6 +180,20 @@
+@@ -64,6 +198,20 @@
          AudioPlayerPlayFrame(silence.data(), silence.size());
      }
  

@@ -97,7 +97,7 @@ Fix, three parts:
      mCurrentTextureIds[tile] = texture_id;
 --- a/libultraship/src/fast/interpreter.cpp
 +++ b/libultraship/src/fast/interpreter.cpp
-@@ -1392,6 +1392,43 @@
+@@ -1388,6 +1388,43 @@
              SPDLOG_ERROR("Invalid texture format. Fmt = {}", fmt);
              break;
      }

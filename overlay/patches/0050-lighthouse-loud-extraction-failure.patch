@@ -61,9 +61,9 @@ what happens on a failure that today is silent or misdirected. Desktop gets the
 same improvement, which is correct — the defects are not iOS-specific, iOS is
 just where the ROM lands in the shortcut's path.
 
---- a/src/port/Engine.cpp
-+++ b/src/port/Engine.cpp
-@@ -675,6 +675,21 @@
+--- a/src/port/Extractor/ExtractFlow.cpp
++++ b/src/port/Extractor/ExtractFlow.cpp
+@@ -391,6 +391,21 @@
              }
              case ES_EXTRACT_ARGS: {
  #if !defined(__SWITCH__) && !defined(__WIIU__)
@@ -85,9 +85,9 @@ just where the ROM lands in the shortcut's path.
                  if (args.size() == 0) {
                      LighthouseGui::RegisterPopup(
                          "Run Lighthouse", "All files have been processed. Run Lighthouse?", "Yes", "No",
-@@ -778,7 +793,14 @@
-                             // Skip the picker entirely if a baserom.us.z64 is sitting in the app
-                             // directory: load it and go straight to extraction.
+@@ -492,7 +507,14 @@
+                     case PS_FIRST: {
+                         if (args.empty()) {
                              std::string baserom = Ship::Context::GetPathRelativeToAppDirectory("baserom.us.z64");
 -                            if (std::filesystem::exists(baserom) && extract.LoadRomFromPath(baserom)) {
 +                            // LIGHTHOUSE_IOS (overlay 0050): RunStandalone, not LoadRomFromPath.
