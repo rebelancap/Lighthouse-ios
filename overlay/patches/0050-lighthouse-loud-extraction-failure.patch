@@ -55,8 +55,8 @@ territory, and is strictly broader — it catches ANY path that returns without
 producing an archive.
 
 Both edits are platform-NEUTRAL, deliberately. Neither changes behaviour on a
-successful retail extraction, so the macOS oracle (permanent ground truth,
-charter 0.7) is untouched in every case it actually exercises; they only alter
+successful retail extraction, so the macOS build (permanent ground truth,
+spec 0.7) is untouched in every case it actually exercises; they only alter
 what happens on a failure that today is silent or misdirected. Desktop gets the
 same improvement, which is correct — the defects are not iOS-specific, iOS is
 just where the ROM lands in the shortcut's path.

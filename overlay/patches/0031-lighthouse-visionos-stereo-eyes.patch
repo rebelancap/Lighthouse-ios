@@ -8,7 +8,7 @@ and (b) applies an off-axis stereo projection to PERSPECTIVE matrices only.
 Orthographic passes (HUD, 2D) are left untouched and therefore sit exactly on
 the panel plane, which is comfort for free.
 
-THE HOST-FRAME BRANCH IS NOT HERE — see overlay 0042. The flagship puts it in
+THE HOST-FRAME BRANCH IS NOT HERE — see overlay 0042. the Ship of Harkinian port puts it in
 `Fast3dWindow::DrawAndRunGraphicsCommands`, and that function exists in this
 LUS fork too, but LIGHTHOUSE NEVER CALLS IT: upstream expanded it inline in
 `GameEngine` (src/port/Engine.cpp) so it can read the backbuffer between
@@ -28,12 +28,12 @@ pending-mip pass, and replicates EndFrame's per-frame state cleanup.
 Both eyes render EVERY host frame. Alternating them halves each eye's rate
 and reads as judder.
 
-PORTED FROM THE FLAGSHIP WITH ZERO REBASE. All fourteen anchors matched this
+PORTED FROM the Ship of Harkinian port WITH ZERO REBASE. All fourteen anchors matched this
 LUS fork (2917d0f) exactly on the first probe — the Phase 0 divergence audit
 predicted the visionOS patches would apply clean and they do. Local variable
 names keep their `soh` prefix deliberately: they were chosen to avoid
 collisions in these functions, renaming buys nothing, and keeping them makes
-a future three-way diff against the flagship readable.
+a future three-way diff against the Ship of Harkinian port readable.
 
 WHAT IS BANJO-SPECIFIC, and therefore genuinely ours:
 * The camera basis comes from overlay 0032, which exports BK's own
@@ -43,7 +43,7 @@ WHAT IS BANJO-SPECIFIC, and therefore genuinely ours:
 
 ALSO FOLDED IN HERE (was briefly its own patch 0041, Phase 01): publishing
 `mGfxCurrentWindowDimensions` and `mCurDimensions` to the shell for the
-`drawable` bridge command. It lives in the flagship's 0031 too; it was split
+`drawable` bridge command. It lives in the Ship of Harkinian port 0031 too; it was split
 out only because Phase 01 needed the sub-native check (playbook 1.4a) before
 Phase 02 existed. Now that this patch is here it takes the lines back, because
 two patches writing inside one hunk's context window is precisely the trap
@@ -51,7 +51,7 @@ that broke 0038's reverse-apply earlier in this session.
 
 Everything new is `__IOS__`-guarded. The shell globals live in SohIosShell.m,
 which is compiled for iPhone too, so iPhone links resolve and the mode simply
-never leaves 0; the macOS oracle compiles none of it.
+never leaves 0; the macOS build compiles none of it.
 
 --- a/libultraship/include/fast/backends/gfx_rendering_api.h
 +++ b/libultraship/include/fast/backends/gfx_rendering_api.h
@@ -400,8 +400,8 @@ never leaves 0; the macOS oracle compiles none of it.
 +    // must not re-render into a texture the compositor may still be
 +    // reading.
 +    //
-+    // DEPTH 4, not the flagship's 2, and this is a genuine port
-+    // divergence rather than padding. The flagship renders both eyes once
++    // DEPTH 4, not the Ship of Harkinian port 2, and this is a genuine port
++    // divergence rather than padding. the Ship of Harkinian port renders both eyes once
 +    // per HOST frame, so a 2-deep ring is reused every other frame.
 +    // Lighthouse renders them once per interpolated SUB-FRAME (overlay
 +    // 0042; 4 sub-frames per 30 Hz tick at 120 fps), so a 2-deep ring is
@@ -496,13 +496,13 @@ never leaves 0; the macOS oracle compiles none of it.
 +    sSoh3DSpLastMix = sSoh3DPauseMix;
 +    memcpy(out, in, sizeof(sSoh3DP));
 +    float sohWx = in[0][3], sohWy = in[1][3], sohWz = in[2][3];
-+    // PERSPECTIVE DETECT -- threshold is 0.01, NOT the flagship's 0.25.
++    // PERSPECTIVE DETECT -- threshold is 0.01, NOT the Ship of Harkinian port 0.25.
 +    //
 +    // guPerspective's last argument scales the whole matrix, and the w-column
 +    // scales with it. OoT passes view->scale (1.0), so |w| = 1 and |w|^2 = 1.0,
 +    // comfortably clear of 0.25. **Banjo-Kazooie hardcodes 0.5f**
 +    // (core1/viewport.c: guPerspective(..., 0.5f)), so |w| = 0.5 and
-+    // |w|^2 = 0.25 -- EXACTLY the flagship's threshold. Float noise and the
++    // |w|^2 = 0.25 -- EXACTLY the Ship of Harkinian port threshold. Float noise and the
 +    // three rotation MULs that follow push it either side of the line
 +    // essentially at random, so the fold applied on some frames and not
 +    // others: measured 155160 ortho-rejections out of 164160 calls in
@@ -539,7 +539,7 @@ never leaves 0; the macOS oracle compiles none of it.
 +    }
 +    const float s = e * gSoh3DCamP00 / sSoh3DConv;
 +    // CONVERGENCE SKEW -- and the ONE place this port must NOT copy the
-+    // flagship. The skew wants clip_x += s * view_depth. The flagship writes
++    // reference. The skew wants clip_x += s * view_depth. the Ship of Harkinian port writes
 +    // that as s * (dot(v,fwd) - dot(eye,fwd)), which is correct for OoT
 +    // because OoT feeds Fast3D a COMBINED viewing*projection matrix, so the
 +    // vertices reaching P are WORLD-ABSOLUTE and the camera position has to
@@ -649,7 +649,7 @@ never leaves 0; the macOS oracle compiles none of it.
 +    // mGfxCurrentWindowDimensions is the window in POINTS. A healthy 2D build
 +    // has cur == drawable x ssaa; cur < drawable means the sub-native trap
 +    // (playbook 1.4a) is back, and without these two lines there is no way to
-+    // tell -- which cost the flagship two device rounds.
++    // tell -- which cost the Ship of Harkinian port two device rounds.
 +    sSoh3DSkybox = 0;
 +    gSoh3DDbg2DW = (int)mGfxCurrentWindowDimensions.width;
 +    gSoh3DDbg2DH = (int)mGfxCurrentWindowDimensions.height;
@@ -745,7 +745,7 @@ never leaves 0; the macOS oracle compiles none of it.
 +        sSoh3DAimMix += ((gSoh3DAiming ? 1.0f : 0.0f) - sSoh3DAimMix) * 0.15f;
 +    }
 +    auto sohCvars = Ship::Context::GetRawInstance()->GetConsoleVariables();
-+    // Depth default 0.024375, NOT the flagship 0.0325. The user rescaled
++    // Depth default 0.024375, NOT the Ship of Harkinian port 0.0325. The user rescaled
 +    // the slider so the OLD 150% became the new 200% maximum, which makes
 +    // the new 100% equal the old 75% -- the value they had settled on by
 +    // hand. 0.0325 * 0.75 = 0.024375. SohVisionApp.swift applies the same
@@ -754,7 +754,7 @@ never leaves 0; the macOS oracle compiles none of it.
 +    float sohBias = sohCvars->GetFloat("gSohIos.StereoConvBias", 1.0f);
 +    // First-person profile: BK's egg-shooting / look-around view puts the
 +    // camera inside Banjo, where full depth reads as double vision. Depth 30%
-+    // and focus 50%, smoothly blended (the flagship's device-tuned numbers for
++    // and focus 50%, smoothly blended (the Ship of Harkinian port device-tuned numbers for
 +    // the equivalent slingshot/bow camera).
 +    float sohAimDepthMul = 1.0f - 0.7f * sSoh3DAimMix;
 +    float sohAimBiasMul = 1.0f - 0.5f * sSoh3DAimMix;

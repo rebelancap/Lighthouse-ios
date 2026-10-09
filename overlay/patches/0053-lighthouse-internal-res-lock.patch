@@ -45,7 +45,7 @@ temporary.
 ASCII ONLY in the tooltip: the menu font atlas has no em-dash or bullet glyph
 and renders them as '?' (recorded in 0017's visionOS branch).
 
-`__IOS__`-guarded, so desktop and the macOS oracle keep the working slider.
+`__IOS__`-guarded, so desktop and the macOS build keep the working slider.
 
 Match-count asserted against the pristine vendor state.
 

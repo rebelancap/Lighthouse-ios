@@ -1,6 +1,6 @@
 Overlay patch 0025: size screen-pass attachments from the ACQUIRED drawable.
 
-Flagship device finding (visionOS, window-resize crash):
+reference device finding (visionOS, window-resize crash):
 SetupScreenFramebuffer receives the CALLER's cached width/height but binds
 the freshly acquired drawable as the colour attachment. During a live
 window resize the drawable's real size differs from those cached values, so

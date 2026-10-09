@@ -20,7 +20,7 @@ then run scripts/apply-overlay.sh.
 
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -235,22 +235,146 @@
+@@ -235,22 +235,172 @@
  endforeach()
  
  if (CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -138,11 +138,37 @@ then run scripts/apply-overlay.sh.
 +    set(LIGHTHOUSE_IOS_DEVELOPMENT_TEAM "" CACHE STRING "Development team for iOS code signing")
 +    set(LIGHTHOUSE_IOS_VERSION "0.0.0" CACHE STRING "Public (marketing) version of this port")
 +    set(LIGHTHOUSE_IOS_BUILD "0" CACHE STRING "Build number; must increase every build")
-+    # The SwiftUI entry's ImmersiveSpace (stereo 3D) needs multiple scenes.
-+    # visionOS ONLY: the key changes UIKit scene behaviour on iPhone, and
-+    # UIApplicationSupportsMultipleScenes must sit INSIDE the scene manifest
-+    # dict, not beside it (playbook §1 trap list).
-+    set(LIGHTHOUSE_PLIST_EXTRA "")
++    # The SwiftUI entry's ImmersiveSpace (stereo 3D) needs multiple scenes;
++    # the LIGHTHOUSE_VISIONOS branch below overwrites LIGHTHOUSE_PLIST_EXTRA
++    # wholesale with that. UIApplicationSupportsMultipleScenes must sit INSIDE
++    # the scene manifest dict, not beside it (playbook §1 trap list).
++    # iOS (D33, = Shipwright c8de40b): the iOS 27 SDK HARD-REQUIRES the UIScene
++    # life cycle -- a UIKit app built against it with no scene manifest is
++    # killed before main() (SIGTRAP in
++    # ___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption). One
++    # window scene, delegate SohIosSceneDelegate (app/ios/SohIosShell.m, which
++    # also grafts the app-delegate scene-config hook onto SDLUIKitDelegate at
++    # +load: the runtime wants BOTH, a manifest alone still traps).
++    set(LIGHTHOUSE_PLIST_EXTRA "
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default</string>
++					<key>UISceneDelegateClassName</key>
++					<string>SohIosSceneDelegate</string>
++					<key>UISceneClassName</key>
++					<string>UIWindowScene</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>")
 +    set(LIGHTHOUSE_DEVICE_FAMILY "1,2")
 +    if(LIGHTHOUSE_VISIONOS)
 +        set(LIGHTHOUSE_DEVICE_FAMILY "7")
@@ -176,7 +202,7 @@ then run scripts/apply-overlay.sh.
      )
  else()
      add_executable(${PROJECT_NAME} ${ALL_FILES})
-@@ -442,8 +566,38 @@
+@@ -442,8 +592,38 @@
      if(MSVC)
          vcpkg_install_packages(sdl2-net)
      endif()
@@ -217,7 +243,7 @@ then run scripts/apply-overlay.sh.
      target_compile_definitions(${PROJECT_NAME} PRIVATE USE_NETWORKING)
  endif()
  
-@@ -479,6 +633,45 @@
+@@ -479,6 +659,45 @@
      target_include_directories(${PROJECT_NAME} PRIVATE
          ${DEVKITPRO}/portlibs/wiiu/include/
      )

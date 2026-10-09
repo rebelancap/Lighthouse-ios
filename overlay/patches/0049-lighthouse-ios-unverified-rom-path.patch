@@ -39,7 +39,7 @@ is a worse answer here: it asks the user to go find a file the app has already
 copied into its own Documents folder.
 
 THE FIX. On iOS only, when the hash is unrecognised, replace the dead-end error
-with the design the program charter asked for — *retail = verified, hack =
+with the design the program spec asked for — *retail = verified, hack =
 explicit user-acknowledged unverified path*:
 
     Unverified ROM
@@ -60,7 +60,7 @@ through `TrySynthesizeRomConfig` just as it does on desktop.
 WHY `#ifdef __IOS__`, and why that is honest rather than timid:
   * Desktop reaches the ungated picker, so it does not need this.
   * `Engine.cpp` is compiled into the macOS ORACLE too, and the oracle is
-    permanent ground truth (program charter 0.7). A patch that changed the
+    permanent ground truth (program spec 0.7). A patch that changed the
     oracle's onboarding would change the reference I compare against.
   * `__IOS__` is defined for the game's own TUs by overlay 0004/0005, and
     Engine.cpp is one of them.
@@ -94,7 +94,7 @@ code will still be missing that code, which is what the prompt says.
 +                    // onboarding shell copies their pick into the app directory, which is
 +                    // what PS_LOCAL scans. RunStandalone() rejects any hash outside the four
 +                    // retail dumps (it drops the bytes it already read), so without this a
-+                    // hack dead-ends here. Offer the charter's explicit user-acknowledged
++                    // hack dead-ends here. Offer the spec's explicit user-acknowledged
 +                    // path instead: LoadRomFromPath + GenerateOTR are the same two calls the
 +                    // desktop picker branch makes, and GenerateOTR synthesizes a config for
 +                    // an unknown hash (BK64::TrySynthesizeRomConfig).

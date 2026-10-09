@@ -157,8 +157,8 @@ Requires macOS with Xcode and `cmake` (`brew install cmake`).
 
 ```sh
 scripts/bootstrap.sh          # clone + pin upstream Lighthouse (submodules recursive)
-scripts/build-oracle.sh       # native macOS build — the parity reference
-scripts/extract-bk-o2r.sh     # build bk.o2r from your ROM (for the sim/oracle)
+scripts/build-oracle.sh       # native macOS build — generates the asset archive
+scripts/extract-bk-o2r.sh     # build bk.o2r from your ROM (for the simulator)
 
 scripts/build-sim.sh          # iOS Simulator build
 scripts/run-sim.sh            # install + launch + screenshot
@@ -168,8 +168,8 @@ scripts/build-visionos.sh     # signed Apple Vision Pro build
 ```
 
 Upstream Lighthouse is vendored **unmodified and pinned by commit**; every local change
-is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.sh` (a
-patch that fails to apply fails the build). The iOS/visionOS app shell lives in `app/ios/`.
+is a reviewable patch in `overlay/patches/`, applied by `scripts/apply-overlay.sh` (a patch that fails to apply fails the build). The iOS/visionOS app shell lives in `app/ios/`.
+
 
 ## Credits & license
 

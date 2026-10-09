@@ -1,13 +1,13 @@
 Overlay patch 0032: export Banjo-Kazooie's live camera basis for stereo 3D.
 
-This is the genuinely port-specific half of Phase 02 — the flagship's 0032
+This is the genuinely port-specific half of Phase 02 — the Ship of Harkinian port 0032
 reads OoT's `z_view.c`, and BK has no such file. What it has is better: a
 `viewport` module (`src/core1/viewport.c`) that owns the camera outright.
 
 WHY A BASIS AND NOT AN OFFSET. N64 ports hand Fast3D a COMBINED
 viewing*projection matrix in `G_MTX_PROJECTION` — the modelview stack is world
 space — so the eye offset cannot be injected as a naive translation, and the
-camera axes cannot be recovered from the combined matrix either. The flagship
+camera axes cannot be recovered from the combined matrix either. the Ship of Harkinian port
 lost four device rounds to world-space offsets: depth varied with camera
 heading, vertical parallax broke fusion outright, and stereo cut out entirely
 at some headings. The game must export its axes. Overlay 0031 consumes them.
@@ -61,7 +61,7 @@ modify. `viewport_update()` was the other candidate; it is called from ten
 sites and would have made "is the export current for THIS draw" a question
 rather than a fact.
 
-Guarded on `__IOS__`; the macOS oracle compiles none of it and the iPhone
+Guarded on `__IOS__`; the macOS build compiles none of it and the iPhone
 build carries it inert (the mode flag never leaves 0 there).
 
 --- a/src/core1/viewport.c

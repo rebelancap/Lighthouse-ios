@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# Install + launch Lighthouse on THIS session's simulator and capture a
-# screenshot. Ladder step 3 is "app boots on sim + CONTENT screenshot" — never
-# trust logs alone: the flagship once measured "120 fps" over a black screen.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/spikes/lighthouse-sim-build/Release-iphonesimulator/Lighthouse.app"
-# D8 — this session's OWN simulator. Never boot a sibling session's.
 UDID="${LIGHTHOUSE_SIM_UDID:-DB38CE9F-5A98-4723-B2D3-40BFE2AC922F}"
 BUNDLE_ID="com.rebelancap.lighthouse"
 SHOT="${1:-$ROOT/artifacts/sim/boot-$(date -u +%Y%m%d-%H%M%S).png}"
@@ -26,28 +22,17 @@ xcrun simctl bootstatus "$UDID" >/dev/null 2>&1 || true
 info "Installing $APP"
 xcrun simctl install "$UDID" "$APP"
 
-# Baseline: what the screen looks like with the app NOT running. Compared
-# against the post-launch shot below — because "the frame is not black" is NOT
-# evidence the app is up: the iOS springboard is colourful and passes that test
-# trivially. This script asserted a pass over a home-screen screenshot once.
 info "Capturing springboard baseline"
 xcrun simctl terminate "$UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
 BASE="$ROOT/work/sim-springboard.png"
 xcrun simctl io "$UDID" screenshot "$BASE" >/dev/null 2>&1 || die "baseline screenshot failed"
 
-# Env vars for the app must carry the SIMCTL_CHILD_ prefix. Trailing tokens on
-# `simctl launch` become ARGV, not environment — passing LIGHTHOUSE_CONSOLE=1
-# bare made argc=2 and tripped an upstream argv[argc] null-deref (patch 0039).
 info "Launching $BUNDLE_ID"
 SIMCTL_CHILD_LIGHTHOUSE_CONSOLE=1 \
     xcrun simctl launch --console-pty "$UDID" "$BUNDLE_ID" \
     >"$ROOT/work/sim-run.log" 2>&1 &
 LAUNCH_PID=$!
 
-# First launch compiles every Metal shader (30-45 s on the flagship); the app
-# also has to find its bundled resources before anything renders. Give it room,
-# then capture. simctl io screenshot grabs the Metal + UIKit composite, which is
-# the whole point — the Simulator bezel window lies about rotation.
 SECS="${LIGHTHOUSE_SIM_SETTLE:-60}"
 info "Settling ${SECS}s before screenshot (first launch builds the shader cache)"
 END=$((SECONDS + SECS))
@@ -56,14 +41,6 @@ while [ $SECONDS -lt $END ]; do sleep 5; done
 xcrun simctl io "$UDID" screenshot "$SHOT" || die "screenshot failed"
 info "screenshot: $SHOT"
 
-# Three things must ALL hold for this to count as a boot:
-#   1. the process is still alive (a crashed app leaves the springboard up),
-#   2. the frame is not black (the classic "120 fps over a black screen"),
-#   3. the frame DIFFERS from the springboard baseline (the app is actually
-#      presenting, not merely running headless behind the home screen).
-# launchctl lists a live app as "UIKitApplication:<bundle-id>[...]". Run the
-# pipeline in a subshell without pipefail: simctl spawn is chatty on stderr and
-# a non-zero exit there would otherwise be misread as "app dead" (it was).
 ALIVE=0
 if (set +o pipefail; xcrun simctl spawn "$UDID" launchctl list 2>/dev/null \
         | grep -q "UIKitApplication:$BUNDLE_ID"); then

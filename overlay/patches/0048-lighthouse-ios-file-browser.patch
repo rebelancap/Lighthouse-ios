@@ -37,7 +37,7 @@ combine to produce that:
    Apple is not in that list, so `Lighthouse::PickFile` calls
    `pfd::open_file`. portable-file-dialogs' `__APPLE__` backend drives
    **osascript** — a SUBPROCESS, which iOS does not permit at all (program
-   charter 0.5: "no JIT, no subprocesses on iOS"). It returns an empty
+   spec 0.5: "no JIT, no subprocesses on iOS"). It returns an empty
    selection immediately, `SelectGameFromUI` reports failure, and the user
    gets "No ROM O2R file detected. Please generate a ROM O2R and relaunch."
 

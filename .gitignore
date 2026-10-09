@@ -36,3 +36,4 @@ artifacts/**/*.ipa
 # OTA hosting dir — IPAs, rebuildable, and OTA builds have the remote console
 # COMPILED IN, so they must never reach a public repo.
 ota/
+__pycache__/
